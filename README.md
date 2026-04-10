@@ -1,6 +1,6 @@
-# Open Scanner
+# Scan Man
 
-Open Scanner is a local-first iOS document scanner built with Apple frameworks only.
+Scan Man is a local-first iOS document scanner built with Apple frameworks only.
 
 ## Stack
 
