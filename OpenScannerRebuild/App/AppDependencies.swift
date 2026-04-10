@@ -6,6 +6,7 @@ struct AppDependencies {
     let ocrService: OCRRecognizing
     let pdfExporter: PDFExporting
     let titleSuggester: TitleSuggesting
+    let ocrProcessor: ScanOCRProcessing
     let scanDeviceSupport: ScanDeviceSupporting
     let scanImporter: ScanImporting
 
@@ -13,12 +14,14 @@ struct AppDependencies {
         let persistenceController = PersistenceController()
         let repository = CoreDataScanRepository(persistenceController: persistenceController)
         let titleSuggester = TitleSuggestionService()
+        let ocrService = VisionOCRService()
         return AppDependencies(
             persistenceController: persistenceController,
             repository: repository,
-            ocrService: VisionOCRService(),
+            ocrService: ocrService,
             pdfExporter: PDFExportService(),
             titleSuggester: titleSuggester,
+            ocrProcessor: ScanOCRProcessor(recognizer: ocrService, titleSuggester: titleSuggester),
             scanDeviceSupport: ScanDeviceSupport(),
             scanImporter: ScanImportService()
         )

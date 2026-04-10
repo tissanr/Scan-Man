@@ -74,6 +74,9 @@ struct ScanDetailView: View {
         }
         .navigationTitle(viewModel.scan.title)
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await viewModel.refresh()
+        }
         .sheet(
             isPresented: Binding(
                 get: { viewModel.exportedFile != nil },

@@ -22,6 +22,10 @@ struct PreviewScanRepository: ScanRepository {
         ]
     }
 
+    func fetchScan(id: UUID) async throws -> ScanDocument? {
+        try await fetchScans().first(where: { $0.id == id })
+    }
+
     func save(scan: ScanDocument) async throws {
     }
 

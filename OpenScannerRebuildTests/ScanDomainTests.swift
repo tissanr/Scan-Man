@@ -36,6 +36,7 @@ struct ScanDomainTests {
         let viewModel = HomeViewModel(
             repository: repository,
             titleSuggester: TitleSuggestionService(),
+            ocrProcessor: StubOCRProcessor(result: ScanOCRProcessingResult(scan: TestData.scan(title: "Imported", pages: []), failedPageCount: 0)),
             scanDeviceSupport: StubDeviceSupport(canScanDocuments: true),
             scanImporter: StubScanImporter(result: .success(TestData.scan(title: "Imported", pages: [])))
         )
@@ -101,5 +102,25 @@ struct ScanDomainTests {
         #expect(scan.pages.map(\.order) == [0, 1])
         #expect(scan.pages.allSatisfy { !$0.imageData.isEmpty })
         #expect(scan.pages.allSatisfy { !$0.thumbnailData.isEmpty })
+    }
+
+    @Test
+    func ocrProcessorMapsRecognizedTextIntoStoredPagesAndSuggestsTitle() async {
+        let firstPage = TestData.page(order: 0, text: "")
+        let secondPage = TestData.page(order: 1, text: "")
+        let recognizer = StubOCRRecognizer(
+            textByPayload: [
+                firstPage.imageData: "Invoice 42\nTotal due",
+                secondPage.imageData: "Second page body"
+            ],
+            failingPayloads: []
+        )
+        let processor = ScanOCRProcessor(recognizer: recognizer, titleSuggester: TitleSuggestionService())
+
+        let result = await processor.process(scan: TestData.scan(title: "Scan Jan 1", pages: [secondPage, firstPage]))
+
+        #expect(result.failedPageCount == 0)
+        #expect(result.scan.pages.map(\.recognizedText) == ["Invoice 42\nTotal due", "Second page body"])
+        #expect(result.scan.title == "Invoice 42")
     }
 }

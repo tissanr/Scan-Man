@@ -8,6 +8,7 @@ struct RootView: View {
             viewModel: HomeViewModel(
                 repository: dependencies.repository,
                 titleSuggester: dependencies.titleSuggester,
+                ocrProcessor: dependencies.ocrProcessor,
                 scanDeviceSupport: dependencies.scanDeviceSupport,
                 scanImporter: dependencies.scanImporter
             ),

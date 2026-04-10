@@ -33,6 +33,16 @@ final class ScanDetailViewModel: ObservableObject {
         }
     }
 
+    func refresh() async {
+        do {
+            if let refreshed = try await repository.fetchScan(id: scan.id) {
+                scan = refreshed
+            }
+        } catch {
+            activeErrorMessage = "Unable to refresh this scan."
+        }
+    }
+
     func exportPDF(mode: PDFExportMode) {
         do {
             exportedFile = try pdfExporter.export(scan: scan, mode: mode)

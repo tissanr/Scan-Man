@@ -13,6 +13,10 @@ final class StubScanRepository: ScanRepository {
         storedScans
     }
 
+    func fetchScan(id: UUID) async throws -> ScanDocument? {
+        storedScans.first(where: { $0.id == id })
+    }
+
     func save(scan: ScanDocument) async throws {
     }
 
@@ -36,5 +40,26 @@ struct StubScanImporter: ScanImporting {
 
     func makeScanDocument(from images: [UIImage], createdAt: Date) throws -> ScanDocument {
         try result.get()
+    }
+}
+
+struct StubOCRRecognizer: OCRRecognizing {
+    let textByPayload: [Data: String]
+    let failingPayloads: Set<Data>
+
+    func recognizeText(in imageData: Data) async throws -> String {
+        if failingPayloads.contains(imageData) {
+            throw OCRServiceError.invalidImageData
+        }
+
+        return textByPayload[imageData] ?? ""
+    }
+}
+
+struct StubOCRProcessor: ScanOCRProcessing {
+    let result: ScanOCRProcessingResult
+
+    func process(scan: ScanDocument) async -> ScanOCRProcessingResult {
+        result
     }
 }

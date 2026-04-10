@@ -3,7 +3,7 @@ import Foundation
 struct ScanDocument: Identifiable, Equatable, Sendable {
     let id: UUID
     let createdAt: Date
-    let updatedAt: Date
+    var updatedAt: Date
     var title: String
     var pages: [ScanPage]
 

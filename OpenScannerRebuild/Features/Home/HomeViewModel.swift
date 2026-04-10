@@ -6,6 +6,7 @@ import UIKit
 final class HomeViewModel: ObservableObject {
     private let repository: ScanRepository
     private let titleSuggester: TitleSuggesting
+    private let ocrProcessor: ScanOCRProcessing
     private let scanDeviceSupport: ScanDeviceSupporting
     private let scanImporter: ScanImporting
 
@@ -15,9 +16,10 @@ final class HomeViewModel: ObservableObject {
     @Published private(set) var isShowingScanner = false
     @Published private(set) var pendingNavigationScan: ScanDocument?
 
-    init(repository: ScanRepository, titleSuggester: TitleSuggesting, scanDeviceSupport: ScanDeviceSupporting, scanImporter: ScanImporting) {
+    init(repository: ScanRepository, titleSuggester: TitleSuggesting, ocrProcessor: ScanOCRProcessing, scanDeviceSupport: ScanDeviceSupporting, scanImporter: ScanImporting) {
         self.repository = repository
         self.titleSuggester = titleSuggester
+        self.ocrProcessor = ocrProcessor
         self.scanDeviceSupport = scanDeviceSupport
         self.scanImporter = scanImporter
     }
@@ -79,6 +81,9 @@ final class HomeViewModel: ObservableObject {
             try await repository.save(scan: scan)
             scans.insert(scan, at: 0)
             pendingNavigationScan = scan
+            Task {
+                await processOCR(for: scan)
+            }
         } catch {
             activeErrorMessage = error.localizedDescription.isEmpty ? "Open Scanner could not save this scan." : error.localizedDescription
         }
@@ -96,5 +101,24 @@ final class HomeViewModel: ObservableObject {
 
     func suggestedTitle(for pages: [ScanPage]) -> String {
         titleSuggester.suggestTitle(for: pages)
+    }
+
+    private func processOCR(for scan: ScanDocument) async {
+        let result = await ocrProcessor.process(scan: scan)
+
+        do {
+            try await repository.save(scan: result.scan)
+            if let index = scans.firstIndex(where: { $0.id == result.scan.id }) {
+                scans[index] = result.scan
+            } else {
+                await load()
+            }
+
+            if result.failedPageCount == result.scan.pages.count, !result.scan.pages.isEmpty {
+                activeErrorMessage = "OCR could not read this scan, but the pages were saved successfully."
+            }
+        } catch {
+            activeErrorMessage = "The scan was saved, but OCR results could not be stored."
+        }
     }
 }

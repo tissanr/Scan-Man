@@ -12,6 +12,15 @@ struct CoreDataScanRepository: ScanRepository {
         }
     }
 
+    func fetchScan(id: UUID) async throws -> ScanDocument? {
+        try await persistenceController.performBackgroundTask { context in
+            let request = ScanEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+            request.fetchLimit = 1
+            return try context.fetch(request).first?.toDomainModel()
+        }
+    }
+
     func save(scan: ScanDocument) async throws {
         _ = try await persistenceController.performBackgroundTask { context in
             let request = ScanEntity.fetchRequest()
