@@ -1,9 +1,23 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="false" userDefinedModelVersionIdentifier="">
-    <entity name="Item" representedClassName="Item" syncable="YES" codeGenerationType="class">
-        <attribute name="timestamp" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="ScanEntity" representedClassName="ScanEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="title" optional="NO" attributeType="String"/>
+        <attribute name="updatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="pages" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ScanPageEntity" inverseName="scan" inverseEntity="ScanPageEntity"/>
+    </entity>
+    <entity name="ScanPageEntity" representedClassName="ScanPageEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="imageData" optional="NO" attributeType="Binary"/>
+        <attribute name="order" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="recognizedText" optional="NO" attributeType="String"/>
+        <attribute name="thumbnailData" optional="NO" attributeType="Binary"/>
+        <relationship name="scan" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="ScanEntity" inverseName="pages" inverseEntity="ScanEntity"/>
     </entity>
     <elements>
-        <element name="Item" positionX="-63" positionY="-18" width="128" height="44"/>
+        <element name="ScanEntity" positionX="-63" positionY="-18" width="128" height="118"/>
+        <element name="ScanPageEntity" positionX="170" positionY="-18" width="128" height="133"/>
     </elements>
 </model>

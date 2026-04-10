@@ -1,0 +1,28 @@
+import SwiftUI
+
+struct RootView: View {
+    let dependencies: AppDependencies
+
+    var body: some View {
+        HomeView(
+            viewModel: HomeViewModel(
+                repository: dependencies.repository,
+                titleSuggester: dependencies.titleSuggester,
+                scanDeviceSupport: dependencies.scanDeviceSupport,
+                scanImporter: dependencies.scanImporter
+            ),
+            detailFactory: { scan in
+                ScanDetailView(
+                    viewModel: ScanDetailViewModel(
+                        scan: scan,
+                        repository: dependencies.repository,
+                        pdfExporter: dependencies.pdfExporter
+                    )
+                )
+            }
+        )
+        .task {
+            await AppSeeder.seedIfNeeded(using: dependencies.repository)
+        }
+    }
+}
