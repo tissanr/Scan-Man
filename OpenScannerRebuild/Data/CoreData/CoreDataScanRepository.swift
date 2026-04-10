@@ -3,6 +3,8 @@ import Foundation
 
 struct CoreDataScanRepository: ScanRepository {
     let persistenceController: PersistenceController
+    private let encoder = JSONEncoder()
+    static let decoder = JSONDecoder()
 
     func fetchScans() async throws -> [ScanDocument] {
         try await persistenceController.performBackgroundTask { context in
@@ -41,6 +43,7 @@ struct CoreDataScanRepository: ScanRepository {
                 pageEntity.imageData = page.imageData
                 pageEntity.thumbnailData = page.thumbnailData
                 pageEntity.recognizedText = page.recognizedText.normalizedOCRText
+                pageEntity.ocrLayoutData = try? encoder.encode(page.textObservations)
                 pageEntity.scan = entity
             }
         }
@@ -90,9 +93,17 @@ private extension ScanEntity {
                     createdAt: $0.createdAt ?? .distantPast,
                     imageData: $0.imageData ?? Data(),
                     thumbnailData: $0.thumbnailData ?? Data(),
-                    recognizedText: ($0.recognizedText ?? "").normalizedOCRText
+                    recognizedText: ($0.recognizedText ?? "").normalizedOCRText,
+                    textObservations: decodedObservations(from: $0.ocrLayoutData)
                 )
             }
         )
+    }
+
+    func decodedObservations(from data: Data?) -> [OCRTextObservation] {
+        guard let data else {
+            return []
+        }
+        return (try? CoreDataScanRepository.decoder.decode([OCRTextObservation].self, from: data)) ?? []
     }
 }

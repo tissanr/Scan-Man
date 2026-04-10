@@ -20,17 +20,8 @@ struct PDFExportService: PDFExporting {
                 let imageRect = fittedRect(for: image.size, in: pageBounds)
                 image.draw(in: imageRect)
 
-                if mode == .searchable, !page.recognizedText.isEmpty {
-                    let hiddenTextColor = UIColor.black.withAlphaComponent(0.02)
-                    let attributes: [NSAttributedString.Key: Any] = [
-                        .font: UIFont.systemFont(ofSize: 12),
-                        .foregroundColor: hiddenTextColor
-                    ]
-
-                    NSString(string: page.recognizedText).draw(
-                        in: imageRect.insetBy(dx: 12, dy: 12),
-                        withAttributes: attributes
-                    )
+                if mode == .searchable {
+                    drawSearchableText(for: page, in: imageRect)
                 }
             }
         }
@@ -62,6 +53,41 @@ struct PDFExportService: PDFExporting {
         return trimmed.isEmpty ? "OpenScannerExport" : trimmed.replacingOccurrences(of: "/", with: "-")
     }
 
+    private func drawSearchableText(for page: ScanPage, in imageRect: CGRect) {
+        let hiddenTextColor = UIColor.black.withAlphaComponent(0.02)
+
+        if !page.textObservations.isEmpty {
+            for observation in page.textObservations where !observation.text.isEmpty {
+                let rect = observationRect(for: observation.boundingBox, in: imageRect)
+                guard rect.width > 1, rect.height > 1 else {
+                    continue
+                }
+
+                let fontSize = max(8, min(rect.height * 0.85, 36))
+                let attributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: fontSize),
+                    .foregroundColor: hiddenTextColor
+                ]
+                NSString(string: observation.text).draw(in: rect, withAttributes: attributes)
+            }
+            return
+        }
+
+        guard !page.recognizedText.isEmpty else {
+            return
+        }
+
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 12),
+            .foregroundColor: hiddenTextColor
+        ]
+
+        NSString(string: page.recognizedText).draw(
+            in: imageRect.insetBy(dx: 12, dy: 12),
+            withAttributes: attributes
+        )
+    }
+
     private func fittedRect(for imageSize: CGSize, in bounds: CGRect) -> CGRect {
         guard imageSize.width > 0, imageSize.height > 0 else {
             return bounds
@@ -74,6 +100,15 @@ struct PDFExportService: PDFExporting {
             y: bounds.midY - (size.height / 2),
             width: size.width,
             height: size.height
+        )
+    }
+
+    private func observationRect(for boundingBox: OCRBoundingBox, in drawnImageRect: CGRect) -> CGRect {
+        CGRect(
+            x: drawnImageRect.minX + (drawnImageRect.width * boundingBox.x),
+            y: drawnImageRect.minY + (drawnImageRect.height * (1 - boundingBox.y - boundingBox.height)),
+            width: drawnImageRect.width * boundingBox.width,
+            height: drawnImageRect.height * boundingBox.height
         )
     }
 }

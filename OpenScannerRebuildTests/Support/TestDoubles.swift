@@ -44,15 +44,15 @@ struct StubScanImporter: ScanImporting {
 }
 
 struct StubOCRRecognizer: OCRRecognizing {
-    let textByPayload: [Data: String]
+    let contentByPayload: [Data: OCRPageContent]
     let failingPayloads: Set<Data>
 
-    func recognizeText(in imageData: Data) async throws -> String {
+    func recognizePage(in imageData: Data) async throws -> OCRPageContent {
         if failingPayloads.contains(imageData) {
             throw OCRServiceError.invalidImageData
         }
 
-        return textByPayload[imageData] ?? ""
+        return contentByPayload[imageData] ?? OCRPageContent(text: "", observations: [])
     }
 }
 

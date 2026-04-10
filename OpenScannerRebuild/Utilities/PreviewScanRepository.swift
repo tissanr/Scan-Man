@@ -15,7 +15,8 @@ struct PreviewScanRepository: ScanRepository {
                         createdAt: Date(),
                         imageData: Data(),
                         thumbnailData: Data(),
-                        recognizedText: "Coffee beans and pastries"
+                        recognizedText: "Coffee beans and pastries",
+                        textObservations: []
                     )
                 ]
             )

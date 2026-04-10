@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import OpenScannerRebuild
 
+@MainActor
 struct CoreDataRepositoryTests {
     @Test
     func repositoryPreservesPageOrderingAndNormalizesStoredText() async throws {
@@ -32,5 +33,25 @@ struct CoreDataRepositoryTests {
 
         #expect(loaded?.id == scan.id)
         #expect(loaded?.pages.first?.recognizedText == "Hello")
+    }
+
+    @Test
+    func repositoryPersistsOCRGeometry() async throws {
+        let persistence = PersistenceController(inMemory: true)
+        let repository = CoreDataScanRepository(persistenceController: persistence)
+        var page = TestData.page(order: 0, text: "Hello")
+        page.textObservations = [
+            OCRTextObservation(
+                text: "Hello",
+                boundingBox: OCRBoundingBox(x: 0.1, y: 0.2, width: 0.3, height: 0.1)
+            )
+        ]
+        let scan = TestData.scan(title: "Geometry", pages: [page])
+
+        try await repository.save(scan: scan)
+        let loaded = try await repository.fetchScan(id: scan.id)
+
+        #expect(loaded?.pages.first?.textObservations.count == 1)
+        #expect(loaded?.pages.first?.textObservations.first?.text == "Hello")
     }
 }

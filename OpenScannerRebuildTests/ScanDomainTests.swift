@@ -4,6 +4,7 @@ import Testing
 import UIKit
 @testable import OpenScannerRebuild
 
+@MainActor
 struct ScanDomainTests {
     @Test
     func textPreviewGenerationUsesNormalizedFirstNonEmptyPage() {
@@ -27,8 +28,7 @@ struct ScanDomainTests {
     }
 
     @Test
-    @MainActor
-    func searchBehaviorMatchesTitleAndOCRText() {
+    func searchBehaviorMatchesTitleAndOCRText() async {
         let repository = StubScanRepository(scans: [
             TestData.scan(title: "Tax Receipt", pages: [TestData.page(order: 0, text: "Coffee beans")]),
             TestData.scan(title: "Meeting Notes", pages: [TestData.page(order: 0, text: "Quarterly planning")])
@@ -109,9 +109,25 @@ struct ScanDomainTests {
         let firstPage = TestData.page(order: 0, text: "")
         let secondPage = TestData.page(order: 1, text: "")
         let recognizer = StubOCRRecognizer(
-            textByPayload: [
-                firstPage.imageData: "Invoice 42\nTotal due",
-                secondPage.imageData: "Second page body"
+            contentByPayload: [
+                firstPage.imageData: OCRPageContent(
+                    text: "Invoice 42\nTotal due",
+                    observations: [
+                        OCRTextObservation(
+                            text: "Invoice 42",
+                            boundingBox: OCRBoundingBox(x: 0.1, y: 0.7, width: 0.3, height: 0.08)
+                        )
+                    ]
+                ),
+                secondPage.imageData: OCRPageContent(
+                    text: "Second page body",
+                    observations: [
+                        OCRTextObservation(
+                            text: "Second page body",
+                            boundingBox: OCRBoundingBox(x: 0.15, y: 0.4, width: 0.5, height: 0.06)
+                        )
+                    ]
+                )
             ],
             failingPayloads: []
         )
@@ -121,6 +137,25 @@ struct ScanDomainTests {
 
         #expect(result.failedPageCount == 0)
         #expect(result.scan.pages.map(\.recognizedText) == ["Invoice 42\nTotal due", "Second page body"])
+        #expect(result.scan.pages[0].textObservations.count == 1)
         #expect(result.scan.title == "Invoice 42")
+    }
+
+    @Test
+    func searchablePDFUsesObservationTextAndStillSupportsSelection() throws {
+        let service = PDFExportService()
+        var page = TestData.page(order: 0, text: "Fallback text")
+        page.textObservations = [
+            OCRTextObservation(
+                text: "Aligned Text",
+                boundingBox: OCRBoundingBox(x: 0.2, y: 0.6, width: 0.35, height: 0.08)
+            )
+        ]
+        let scan = TestData.scan(title: "Geometry", pages: [page])
+
+        let exported = try service.export(scan: scan, mode: .searchable)
+        let document = try #require(PDFDocument(url: exported.url))
+
+        #expect(document.string?.contains("Aligned Text") == true)
     }
 }

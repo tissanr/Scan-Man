@@ -1,5 +1,10 @@
 import Foundation
 
 protocol OCRRecognizing {
-    func recognizeText(in imageData: Data) async throws -> String
+    func recognizePage(in imageData: Data) async throws -> OCRPageContent
+}
+
+struct OCRPageContent: Equatable, Sendable {
+    let text: String
+    let observations: [OCRTextObservation]
 }

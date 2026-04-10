@@ -22,7 +22,8 @@ enum TestData {
             createdAt: Date(),
             imageData: imageData,
             thumbnailData: thumbnailData,
-            recognizedText: text
+            recognizedText: text,
+            textObservations: []
         )
     }
 

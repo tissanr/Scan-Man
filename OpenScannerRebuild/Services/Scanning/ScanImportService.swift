@@ -24,7 +24,8 @@ struct ScanImportService: ScanImporting {
                 createdAt: createdAt,
                 imageData: imageData,
                 thumbnailData: thumbnailData,
-                recognizedText: ""
+                recognizedText: "",
+                textObservations: []
             )
         }
 

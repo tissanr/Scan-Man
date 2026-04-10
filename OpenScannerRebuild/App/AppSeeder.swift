@@ -25,7 +25,8 @@ enum AppSeeder {
             createdAt: Date(),
             imageData: Self.seedImageData(),
             thumbnailData: Self.seedImageData(size: CGSize(width: 120, height: 160)),
-            recognizedText: "Invoice 2048\nOpen Scanner seeded document"
+            recognizedText: "Invoice 2048\nOpen Scanner seeded document",
+            textObservations: []
         )
 
         let scan = ScanDocument(

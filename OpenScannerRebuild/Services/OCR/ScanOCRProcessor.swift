@@ -14,34 +14,31 @@ struct ScanOCRProcessor: ScanOCRProcessing {
     let titleSuggester: TitleSuggesting
 
     func process(scan: ScanDocument) async -> ScanOCRProcessingResult {
-        var failedPageCount = 0
-        let processedPages = await withTaskGroup(of: (Int, String?, Bool).self) { group in
+        let pageResults = await withTaskGroup(of: OCRPageResult.self) { group in
             for page in scan.pages {
                 group.addTask {
                     do {
-                        let text = try await recognizer.recognizeText(in: page.imageData)
-                        return (page.order, text.normalizedOCRText, false)
+                        let content = try await recognizer.recognizePage(in: page.imageData)
+                        return OCRPageResult(order: page.order, content: content, didFail: false)
                     } catch {
-                        return (page.order, nil, true)
+                        return OCRPageResult(order: page.order, content: nil, didFail: true)
                     }
                 }
             }
 
-            var recognizedByOrder: [Int: String] = [:]
+            var results: [OCRPageResult] = []
             for await result in group {
-                if result.2 {
-                    failedPageCount += 1
-                }
-                if let text = result.1 {
-                    recognizedByOrder[result.0] = text
-                }
+                results.append(result)
             }
-
-            return scan.pages.map { page in
-                var updated = page
-                updated.recognizedText = recognizedByOrder[page.order] ?? ""
-                return updated
-            }
+            return results
+        }
+        let failedPageCount = pageResults.filter(\.didFail).count
+        let processedPages = scan.pages.map { page in
+            var updated = page
+            let result = pageResults.first(where: { $0.order == page.order })
+            updated.recognizedText = result?.content?.text ?? ""
+            updated.textObservations = result?.content?.observations ?? []
+            return updated
         }
 
         var updatedScan = scan
@@ -60,4 +57,10 @@ struct ScanOCRProcessor: ScanOCRProcessing {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty || trimmed == "Untitled Scan" || trimmed.hasPrefix("Scan ")
     }
+}
+
+private struct OCRPageResult {
+    let order: Int
+    let content: OCRPageContent?
+    let didFail: Bool
 }

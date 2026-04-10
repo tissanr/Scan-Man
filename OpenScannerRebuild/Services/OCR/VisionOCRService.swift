@@ -3,7 +3,7 @@ import UIKit
 import Vision
 
 struct VisionOCRService: OCRRecognizing {
-    func recognizeText(in imageData: Data) async throws -> String {
+    func recognizePage(in imageData: Data) async throws -> OCRPageContent {
         guard let image = UIImage(data: imageData), let cgImage = image.cgImage else {
             throw OCRServiceError.invalidImageData
         }
@@ -15,13 +15,30 @@ struct VisionOCRService: OCRRecognizing {
                     return
                 }
 
-                let observations = (request.results as? [VNRecognizedTextObservation]) ?? []
+                let observations = ((request.results as? [VNRecognizedTextObservation]) ?? [])
+                    .compactMap { observation -> OCRTextObservation? in
+                        guard let candidate = observation.topCandidates(1).first else {
+                            return nil
+                        }
+
+                        return OCRTextObservation(
+                            text: candidate.string.normalizedOCRText,
+                            boundingBox: OCRBoundingBox(
+                                x: observation.boundingBox.origin.x,
+                                y: observation.boundingBox.origin.y,
+                                width: observation.boundingBox.size.width,
+                                height: observation.boundingBox.size.height
+                            )
+                        )
+                    }
+                    .filter { !$0.text.isEmpty }
+
                 let text = observations
-                    .compactMap { $0.topCandidates(1).first?.string }
+                    .map(\.text)
                     .joined(separator: "\n")
                     .normalizedOCRText
 
-                continuation.resume(returning: text)
+                continuation.resume(returning: OCRPageContent(text: text, observations: observations))
             }
 
             request.recognitionLevel = .accurate

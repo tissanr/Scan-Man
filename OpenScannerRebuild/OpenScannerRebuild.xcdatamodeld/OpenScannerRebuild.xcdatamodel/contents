@@ -11,6 +11,7 @@
         <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="imageData" optional="NO" attributeType="Binary"/>
+        <attribute name="ocrLayoutData" optional="YES" attributeType="Binary"/>
         <attribute name="order" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="recognizedText" optional="NO" attributeType="String"/>
         <attribute name="thumbnailData" optional="NO" attributeType="Binary"/>
@@ -18,6 +19,6 @@
     </entity>
     <elements>
         <element name="ScanEntity" positionX="-63" positionY="-18" width="128" height="118"/>
-        <element name="ScanPageEntity" positionX="170" positionY="-18" width="128" height="133"/>
+        <element name="ScanPageEntity" positionX="170" positionY="-18" width="128" height="148"/>
     </elements>
 </model>
