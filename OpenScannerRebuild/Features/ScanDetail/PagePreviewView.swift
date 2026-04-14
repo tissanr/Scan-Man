@@ -3,16 +3,30 @@ import UIKit
 
 struct PagePreviewView: View {
     let page: ScanPage
+    var selectedObservationID: String? = nil
 
     var body: some View {
         Group {
             if let image = UIImage(data: page.imageData) {
-                ZoomableScrollView {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
+                GeometryReader { geometry in
+                    ZoomableScrollView {
+                        ZStack {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background(Color.black)
+
+                            OCRLayoutOverlay(
+                                page: page,
+                                imageSize: image.size,
+                                containerSize: geometry.size,
+                                selectedObservationID: selectedObservationID
+                            )
+                        }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Color.black)
+                    }
                 }
                 .background(Color.black.ignoresSafeArea())
             } else {
@@ -26,6 +40,62 @@ struct PagePreviewView: View {
         .navigationTitle("Page \(page.order + 1)")
         .navigationBarTitleDisplayMode(.inline)
         .background(Color.black)
+    }
+}
+
+private struct OCRLayoutOverlay: View {
+    let page: ScanPage
+    let imageSize: CGSize
+    let containerSize: CGSize
+    let selectedObservationID: String?
+
+    var body: some View {
+        let imageRect = fittedRect(for: imageSize, in: CGRect(origin: .zero, size: containerSize))
+
+        ZStack(alignment: .topLeading) {
+            ForEach(Array(page.orderedTextObservations.enumerated()), id: \.offset) { _, observation in
+                let rect = observationRect(for: observation.boundingBox, in: imageRect)
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(observation.id == selectedObservationID ? Color.accentColor : Color.yellow.opacity(0.8), lineWidth: observation.id == selectedObservationID ? 3 : 1)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(observation.id == selectedObservationID ? Color.accentColor.opacity(0.18) : Color.yellow.opacity(0.10))
+                    )
+                    .frame(width: rect.width, height: rect.height)
+                    .offset(x: rect.minX, y: rect.minY)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+
+    private func fittedRect(for imageSize: CGSize, in bounds: CGRect) -> CGRect {
+        guard imageSize.width > 0, imageSize.height > 0 else {
+            return bounds
+        }
+
+        let scale = min(bounds.width / imageSize.width, bounds.height / imageSize.height)
+        let size = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
+        return CGRect(
+            x: bounds.midX - (size.width / 2),
+            y: bounds.midY - (size.height / 2),
+            width: size.width,
+            height: size.height
+        )
+    }
+
+    private func observationRect(for boundingBox: OCRBoundingBox, in drawnImageRect: CGRect) -> CGRect {
+        CGRect(
+            x: drawnImageRect.minX + (drawnImageRect.width * boundingBox.x),
+            y: drawnImageRect.minY + (drawnImageRect.height * (1 - boundingBox.y - boundingBox.height)),
+            width: drawnImageRect.width * boundingBox.width,
+            height: drawnImageRect.height * boundingBox.height
+        )
+    }
+}
+
+private extension OCRTextObservation {
+    var id: String {
+        "\(text)|\(boundingBox.x)|\(boundingBox.y)|\(boundingBox.width)|\(boundingBox.height)"
     }
 }
 

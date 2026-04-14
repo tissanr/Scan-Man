@@ -56,14 +56,24 @@ struct HomeView<Detail: View>: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            Button {
-                viewModel.beginScan()
-            } label: {
-                Label("Scan", systemImage: "plus.viewfinder")
-                    .frame(maxWidth: .infinity)
+            VStack(spacing: 8) {
+                Button {
+                    viewModel.beginScan()
+                } label: {
+                    Label("Scan", systemImage: "plus.viewfinder")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityLabel(viewModel.scanButtonAccessibilityLabel)
+
+                if let scanSupportMessage = viewModel.scanSupportMessage {
+                    Text(scanSupportMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .accessibilityLabel("Scanning availability")
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .accessibilityLabel(viewModel.scanButtonAccessibilityLabel)
             .padding(.horizontal, 16)
             .padding(.top, 8)
             .padding(.bottom, 12)

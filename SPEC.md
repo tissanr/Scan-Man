@@ -62,23 +62,23 @@ Build a native iOS document scanning app called Scan Man using Apple frameworks 
 - Phase 1: delivered
 - Phase 2: delivered
 - Phase 3: delivered
-- Phase 4: next
+- Phase 4: delivered
+- Phase 5: next
 
 ## Next Formal Phase
 
-### Phase 4: OCR Editing And Presentation
+### Phase 5: Optional Sync And Extended Inputs
 
 Goal:
 
-- Improve simulator behavior, let users refine OCR text, and use stored OCR geometry more directly in the app UI.
+- Evaluate the next layer of convenience features without compromising the local-first baseline.
 
 Requirements:
 
-- Keep simulator behavior explicit and graceful when scanning cannot run.
-- Add lightweight per-page OCR text editing without breaking search or export.
-- Use stored OCR geometry to improve the in-app reading experience where it adds value.
-- Keep exports resilient when OCR geometry is partial or unavailable.
+- Consider optional iCloud sync only if it preserves reliable offline behavior.
+- Evaluate importing from photos or PDFs.
+- Explore annotations or other lightweight editing that fits the current architecture.
 
 Prompt:
 
-Implement Phase 4 for Scan Man using Apple frameworks only. Improve simulator-friendly fallback behavior, expand UI test coverage, allow lightweight editing of extracted OCR text per page, and add richer in-app OCR presentation using the stored OCR geometry. Preserve local-first behavior, export compatibility, and graceful fallback when OCR geometry is missing or incomplete.
+Implement the next phase for Scan Man using Apple frameworks only. Preserve the local-first architecture while evaluating optional sync, broader import sources, and lightweight annotation or editing features that build on the existing scan, OCR, and export flows.

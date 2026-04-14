@@ -38,6 +38,14 @@ final class HomeViewModel: ObservableObject {
         "Scan document"
     }
 
+    var scanSupportMessage: String? {
+        guard !scanDeviceSupport.canScanDocuments else {
+            return nil
+        }
+
+        return scanDeviceSupport.unavailableMessage
+    }
+
     func load() async {
         do {
             scans = try await repository.fetchScans()

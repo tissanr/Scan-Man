@@ -3,7 +3,7 @@ import UIKit
 @testable import OpenScannerRebuild
 
 final class StubScanRepository: ScanRepository {
-    private let storedScans: [ScanDocument]
+    private(set) var storedScans: [ScanDocument]
 
     init(scans: [ScanDocument]) {
         self.storedScans = scans
@@ -21,6 +21,15 @@ final class StubScanRepository: ScanRepository {
     }
 
     func updateTitle(scanID: UUID, title: String) async throws {
+    }
+
+    func updateRecognizedText(scanID: UUID, pageID: UUID, text: String) async throws {
+        guard let scanIndex = storedScans.firstIndex(where: { $0.id == scanID }),
+              let pageIndex = storedScans[scanIndex].pages.firstIndex(where: { $0.id == pageID }) else {
+            return
+        }
+
+        storedScans[scanIndex].pages[pageIndex].recognizedText = text.normalizedOCRText
     }
 
     func delete(scanID: UUID) async throws {

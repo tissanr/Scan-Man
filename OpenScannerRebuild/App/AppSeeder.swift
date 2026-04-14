@@ -26,7 +26,16 @@ enum AppSeeder {
             imageData: Self.seedImageData(),
             thumbnailData: Self.seedImageData(size: CGSize(width: 120, height: 160)),
             recognizedText: "Invoice 2048\nOpen Scanner seeded document",
-            textObservations: []
+            textObservations: [
+                OCRTextObservation(
+                    text: "Invoice 2048",
+                    boundingBox: OCRBoundingBox(x: 0.08, y: 0.72, width: 0.32, height: 0.05)
+                ),
+                OCRTextObservation(
+                    text: "Open Scanner seeded document",
+                    boundingBox: OCRBoundingBox(x: 0.08, y: 0.62, width: 0.54, height: 0.04)
+                )
+            ]
         )
 
         let scan = ScanDocument(

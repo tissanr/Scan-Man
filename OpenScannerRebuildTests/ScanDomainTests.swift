@@ -49,6 +49,24 @@ struct ScanDomainTests {
     }
 
     @Test
+    func pageEditingUpdatesPersistedSearchableText() async {
+        let editablePage = TestData.page(order: 0, text: "Initial text")
+        let scan = TestData.scan(title: "Editable Scan", pages: [editablePage])
+        let repository = StubScanRepository(scans: [scan])
+        let viewModel = ScanDetailViewModel(
+            scan: scan,
+            repository: repository,
+            pdfExporter: PDFExportService()
+        )
+
+        let didSave = await viewModel.updateRecognizedText(for: editablePage.id, text: "  Updated invoice total  ")
+
+        #expect(didSave)
+        #expect(viewModel.scan.pages.first?.recognizedText == "Updated invoice total")
+        #expect(viewModel.scan.searchText.contains("updated invoice total"))
+    }
+
+    @Test
     func textExportContentPreservesPageOrder() throws {
         let service = PDFExportService()
         let scan = TestData.scan(title: "Export Me", pages: [

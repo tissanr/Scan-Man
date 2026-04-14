@@ -49,4 +49,40 @@ final class OpenScannerRebuildUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["Seeded Invoice"].waitForExistence(timeout: 2))
     }
+
+    @MainActor
+    func testOpeningSavedPageShowsPreviewAndLayout() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing-seed-scan"]
+        app.launch()
+
+        app.staticTexts["Seeded Invoice"].tap()
+        app.buttons["Open page 1"].tap()
+
+        XCTAssertTrue(app.otherElements["Page preview"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Detected Layout"].waitForExistence(timeout: 2))
+    }
+
+    @MainActor
+    func testEditingExtractedTextPersistsInCurrentFlow() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing-seed-scan"]
+        app.launch()
+
+        app.staticTexts["Seeded Invoice"].tap()
+        app.buttons["Open page 1"].tap()
+
+        let editor = app.textViews["Extracted text editor"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 2))
+        editor.tap()
+        if app.menuItems["Select All"].waitForExistence(timeout: 1) {
+            app.menuItems["Select All"].tap()
+        }
+        editor.typeText("Edited OCR text")
+        app.buttons["Save extracted text"].tap()
+
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        XCTAssertTrue(app.staticTexts["Edited OCR text"].waitForExistence(timeout: 2))
+    }
 }

@@ -62,6 +62,23 @@ struct CoreDataScanRepository: ScanRepository {
         }
     }
 
+    func updateRecognizedText(scanID: UUID, pageID: UUID, text: String) async throws {
+        _ = try await persistenceController.performBackgroundTask { context in
+            let request = ScanEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "id == %@", scanID as CVarArg)
+            guard let entity = try context.fetch(request).first else {
+                return
+            }
+
+            guard let page = entity.orderedPages.first(where: { $0.id == pageID }) else {
+                return
+            }
+
+            page.recognizedText = text.normalizedOCRText
+            entity.updatedAt = Date()
+        }
+    }
+
     func delete(scanID: UUID) async throws {
         _ = try await persistenceController.performBackgroundTask { context in
             let request = ScanEntity.fetchRequest()

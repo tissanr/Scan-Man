@@ -5,6 +5,7 @@ protocol ScanRepository {
     func fetchScan(id: UUID) async throws -> ScanDocument?
     func save(scan: ScanDocument) async throws
     func updateTitle(scanID: UUID, title: String) async throws
+    func updateRecognizedText(scanID: UUID, pageID: UUID, text: String) async throws
     func delete(scanID: UUID) async throws
     func deleteAll() async throws
 }

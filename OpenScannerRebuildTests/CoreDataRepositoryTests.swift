@@ -54,4 +54,20 @@ struct CoreDataRepositoryTests {
         #expect(loaded?.pages.first?.textObservations.count == 1)
         #expect(loaded?.pages.first?.textObservations.first?.text == "Hello")
     }
+
+    @Test
+    func repositoryUpdatesRecognizedTextForSpecificPage() async throws {
+        let persistence = PersistenceController(inMemory: true)
+        let repository = CoreDataScanRepository(persistenceController: persistence)
+        let firstPage = TestData.page(order: 0, text: "Before")
+        let secondPage = TestData.page(order: 1, text: "Untouched")
+        let scan = TestData.scan(title: "Editable", pages: [firstPage, secondPage])
+
+        try await repository.save(scan: scan)
+        try await repository.updateRecognizedText(scanID: scan.id, pageID: firstPage.id, text: "  After \n\n Edit ")
+        let loaded = try await repository.fetchScan(id: scan.id)
+
+        #expect(loaded?.pages.first?.recognizedText == "After\nEdit")
+        #expect(loaded?.pages.last?.recognizedText == "Untouched")
+    }
 }

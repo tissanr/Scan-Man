@@ -5,7 +5,8 @@
 - Delivered: Phase 1
 - Delivered: Phase 2
 - Delivered: Phase 3
-- Next: Phase 4
+- Delivered: Phase 4
+- Next: Phase 5
 
 ## Phase 1
 
@@ -33,6 +34,7 @@
 - Improve simulator-friendly fallback handling and expand UI tests for core library flows.
 - Allow lightweight editing of extracted page text where practical.
 - Explore richer in-app OCR presentation using stored geometry.
+- Status: delivered
 
 ## Phase 5
 

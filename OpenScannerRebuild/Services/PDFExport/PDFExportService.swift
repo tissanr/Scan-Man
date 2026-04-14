@@ -55,6 +55,10 @@ struct PDFExportService: PDFExporting {
 
     private func drawSearchableText(for page: ScanPage, in imageRect: CGRect) {
         let hiddenTextColor = UIColor.black.withAlphaComponent(0.02)
+        let defaultAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 12),
+            .foregroundColor: hiddenTextColor
+        ]
 
         if !page.textObservations.isEmpty {
             for observation in page.textObservations where !observation.text.isEmpty {
@@ -70,21 +74,27 @@ struct PDFExportService: PDFExporting {
                 ]
                 NSString(string: observation.text).draw(in: rect, withAttributes: attributes)
             }
-            return
+
+            let combinedObservationText = page.orderedTextObservations
+                .map(\.text)
+                .joined(separator: "\n")
+                .normalizedOCRText
+
+            if !combinedObservationText.isEmpty {
+                NSString(string: combinedObservationText).draw(
+                    in: imageRect.insetBy(dx: 12, dy: 12),
+                    withAttributes: defaultAttributes
+                )
+            }
         }
 
         guard !page.recognizedText.isEmpty else {
             return
         }
 
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 12),
-            .foregroundColor: hiddenTextColor
-        ]
-
         NSString(string: page.recognizedText).draw(
             in: imageRect.insetBy(dx: 12, dy: 12),
-            withAttributes: attributes
+            withAttributes: defaultAttributes
         )
     }
 

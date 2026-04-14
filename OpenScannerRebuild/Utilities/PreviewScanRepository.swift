@@ -33,6 +33,9 @@ struct PreviewScanRepository: ScanRepository {
     func updateTitle(scanID: UUID, title: String) async throws {
     }
 
+    func updateRecognizedText(scanID: UUID, pageID: UUID, text: String) async throws {
+    }
+
     func delete(scanID: UUID) async throws {
     }
 

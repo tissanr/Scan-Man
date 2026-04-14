@@ -43,6 +43,39 @@ final class ScanDetailViewModel: ObservableObject {
         }
     }
 
+    func page(for pageID: UUID) -> ScanPage? {
+        scan.pages.first(where: { $0.id == pageID })
+    }
+
+    func updateRecognizedText(for pageID: UUID, text: String) async -> Bool {
+        let normalizedText = text.normalizedOCRText
+        guard let index = scan.pages.firstIndex(where: { $0.id == pageID }) else {
+            activeErrorMessage = "Unable to find that page."
+            return false
+        }
+
+        let originalScan = scan
+        let originalPage = scan.pages[index]
+        var updatedScan = scan
+        updatedScan.pages[index].recognizedText = normalizedText
+        updatedScan.updatedAt = Date()
+        scan = updatedScan
+
+        do {
+            try await repository.updateRecognizedText(scanID: scan.id, pageID: pageID, text: normalizedText)
+            return true
+        } catch {
+            var revertedScan = scan
+            if let currentIndex = revertedScan.pages.firstIndex(where: { $0.id == pageID }) {
+                revertedScan.pages[currentIndex] = originalPage
+                revertedScan.updatedAt = originalScan.updatedAt
+            }
+            scan = revertedScan
+            activeErrorMessage = "Unable to save extracted text."
+            return false
+        }
+    }
+
     func exportPDF(mode: PDFExportMode) {
         do {
             exportedFile = try pdfExporter.export(scan: scan, mode: mode)

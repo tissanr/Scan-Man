@@ -21,8 +21,11 @@ Scan Man is a local-first iOS document scanner built with Apple frameworks only.
 
 ## Current Status
 
-- Delivered phases: 1, 2, 3
+- Delivered phases: 1, 2, 3, 4
 - Clean architecture baseline is in place.
 - Home and detail flows use local Core Data-backed models.
-- VisionKit capture, OCR-backed search, text export, and searchable PDF export with OCR geometry alignment are implemented.
-- The next planned phase is simulator fallback polish, OCR text editing, and richer in-app OCR presentation.
+- VisionKit capture, OCR-backed search, per-page OCR text editing, text export, and searchable PDF export with OCR geometry alignment are implemented.
+- Page detail now includes OCR geometry-aware preview overlays and a richer in-app reading presentation when layout data is available.
+- Simulator fallback is explicit in the UI when document scanning is unavailable.
+- UI tests cover the home screen, scan entry fallback, opening saved scans, searching, page preview, and page text editing.
+- The next planned phase is optional sync and broader import/editing exploration.

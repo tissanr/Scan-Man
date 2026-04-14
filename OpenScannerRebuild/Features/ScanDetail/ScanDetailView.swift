@@ -27,7 +27,15 @@ struct ScanDetailView: View {
             Section("Pages") {
                 ForEach(viewModel.scan.pages.sorted(by: { $0.order < $1.order })) { page in
                     NavigationLink {
-                        PagePreviewView(page: page)
+                        ScanPageDetailView(
+                            page: page,
+                            saveRecognizedText: { updatedText in
+                                await viewModel.updateRecognizedText(for: page.id, text: updatedText)
+                            },
+                            reloadPage: {
+                                viewModel.page(for: page.id)
+                            }
+                        )
                     } label: {
                         HStack(alignment: .top, spacing: 12) {
                             previewImage(for: page)
