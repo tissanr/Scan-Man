@@ -1,8 +1,8 @@
-# Open Scanner Spec
+# Scan Man Spec
 
 ## Goal
 
-Build a native iOS document scanning app called Open Scanner using Apple frameworks only. The app should be local-first, reliable, and easy to extend.
+Build a native iOS document scanning app called Scan Man using Apple frameworks only. The app should be local-first, reliable, and easy to extend.
 
 ## Product Requirements
 
@@ -56,6 +56,13 @@ Build a native iOS document scanning app called Open Scanner using Apple framewo
 - Searchable PDF contains selectable text.
 - App builds with Personal Team signing.
 - Basic unit and UI tests pass.
+
+## Delivered Status
+
+- Phase 1: delivered
+- Phase 2: delivered
+- Phase 3: delivered
+- Phase 4: next
 
 ## Next Formal Phase
 
