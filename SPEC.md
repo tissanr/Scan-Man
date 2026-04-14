@@ -15,7 +15,7 @@ Build a native iOS document scanning app called Open Scanner using Apple framewo
 
 ## Platform
 
-- iOS 16+
+- iOS 17+
 - Swift 5+
 - SwiftUI
 - VisionKit
@@ -59,20 +59,19 @@ Build a native iOS document scanning app called Open Scanner using Apple framewo
 
 ## Next Formal Phase
 
-### Phase 3: OCR Geometry Alignment
+### Phase 4: OCR Editing And Presentation
 
 Goal:
 
-- Improve searchable PDF fidelity by storing OCR geometry and drawing hidden text closer to the true word positions on the scanned page.
+- Improve simulator behavior, let users refine OCR text, and use stored OCR geometry more directly in the app UI.
 
 Requirements:
 
-- Capture Vision text observations with bounding boxes for each page.
-- Preserve the normalized page text already used for search and previews.
-- Add a persistence model for OCR geometry that can evolve without tightly coupling OCR to SwiftUI views.
-- Convert Vision coordinates into PDF coordinates during searchable export.
-- Keep export resilient when OCR data is partial or unavailable.
+- Keep simulator behavior explicit and graceful when scanning cannot run.
+- Add lightweight per-page OCR text editing without breaking search or export.
+- Use stored OCR geometry to improve the in-app reading experience where it adds value.
+- Keep exports resilient when OCR geometry is partial or unavailable.
 
 Prompt:
 
-Implement OCR geometry alignment for Scan Man using Apple frameworks only. Extend the OCR pipeline to capture and store Vision text observations with bounding boxes per page, keep the current normalized page text for search, and update searchable PDF export so hidden/selectable text is placed using those bounding boxes rather than a single approximate text block. Preserve image-first rendering, offline behavior, testability, and graceful fallback when OCR geometry is unavailable.
+Implement Phase 4 for Scan Man using Apple frameworks only. Improve simulator-friendly fallback behavior, expand UI test coverage, allow lightweight editing of extracted OCR text per page, and add richer in-app OCR presentation using the stored OCR geometry. Preserve local-first behavior, export compatibility, and graceful fallback when OCR geometry is missing or incomplete.

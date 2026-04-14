@@ -1,5 +1,12 @@
 # Roadmap
 
+## Status
+
+- Delivered: Phase 1
+- Delivered: Phase 2
+- Delivered: Phase 3
+- Next: Phase 4
+
 ## Phase 1
 
 - Replace the template app with the Scan Man shell.
@@ -20,28 +27,6 @@
 - Improve searchable PDF alignment so hidden/selectable text matches the scanned page image closely.
 - Prepare the app for future in-image text overlays and more precise text selection behavior.
 - Add focused tests around OCR box mapping and aligned PDF export.
-
-### Phase 3 Prompt
-
-Implement OCR geometry alignment for Scan Man.
-
-Scope:
-
-- Keep the app Apple-framework-only and local-first.
-- Extend the OCR pipeline to capture Vision text observations with bounding boxes per page, not just normalized full-page text.
-- Persist OCR geometry in a way that is testable and easy to evolve.
-- Update searchable PDF export so hidden/selectable text is drawn using the OCR bounding boxes and scaled into the correct PDF coordinates.
-- Preserve existing image-first PDF rendering and page order.
-- If OCR geometry is missing, searchable export must still fall back cleanly to the current image-only or text-only behavior.
-- Do not add CloudKit, third-party dependencies, or non-Apple frameworks.
-
-Acceptance criteria:
-
-- Exported searchable PDFs have materially better text alignment against the source scan.
-- Text selection/search works in Preview/Files with closer word placement than the current whole-page approximation.
-- Existing image-only PDF export still works.
-- OCR failures remain non-fatal and user-visible.
-- Unit tests cover coordinate conversion and searchable PDF text placement behavior.
 
 ## Phase 4
 

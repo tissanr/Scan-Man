@@ -51,26 +51,29 @@ struct HomeView<Detail: View>: View {
                 get: { viewModel.searchText },
                 set: { viewModel.searchText = $0 }
             ), prompt: "Search scans")
-            .toolbar {
-                ToolbarItem(placement: .bottomBar) {
-                    Button {
-                        viewModel.beginScan()
-                    } label: {
-                        Label("Scan", systemImage: "plus.viewfinder")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .accessibilityLabel(viewModel.scanButtonAccessibilityLabel)
-                }
-            }
             .navigationDestination(for: ScanDocument.self) { scan in
                 detailFactory(scan)
             }
         }
+        .safeAreaInset(edge: .bottom) {
+            Button {
+                viewModel.beginScan()
+            } label: {
+                Label("Scan", systemImage: "plus.viewfinder")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .accessibilityLabel(viewModel.scanButtonAccessibilityLabel)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
+            .background(.bar)
+        }
         .task {
             await viewModel.load()
         }
-        .onChange(of: viewModel.pendingNavigationScan) { scan in
+        .onChange(of: viewModel.pendingNavigationScan) {
+            let scan = viewModel.pendingNavigationScan
             guard let scan else {
                 return
             }
