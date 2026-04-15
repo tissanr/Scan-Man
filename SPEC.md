@@ -64,21 +64,50 @@ Build a native iOS document scanning app called Scan Man using Apple frameworks 
 - Phase 3: delivered
 - Phase 4: delivered
 - Phase 5: next
+- Phase 6: planned
 
-## Next Formal Phase
+## Next Formal Phases
 
 ### Phase 5: Optional Sync And Extended Inputs
 
 Goal:
 
-- Evaluate the next layer of convenience features without compromising the local-first baseline.
+- Evaluate the next layer of convenience features without compromising the local-first baseline, with special attention to export paths.
 
 Requirements:
 
 - Consider optional iCloud sync only if it preserves reliable offline behavior.
+- Keep Apple-native export and share flows as the default v1 approach.
+- Evaluate export targets by complexity and product value:
+  - Lowest complexity: `UIActivityViewController` and document picker based export to the share sheet and Files providers already installed on iOS.
+  - Low-to-medium complexity: repeated export conveniences like remembered destinations, export presets, or one-tap re-export built on security-scoped bookmarks.
+  - Medium-to-high complexity: direct Nextcloud export via WebDAV, including credentials, app passwords, folder browsing, upload progress, retries, and conflict handling.
+  - High complexity: Syncthing-specific export or sync, because iOS does not provide a native Syncthing framework and the app would need either a companion-app handoff or a constrained filesystem-based workflow.
+- Prefer generic Apple document flows over provider-specific integrations unless a provider unlocks meaningful workflow value beyond the system share/export options.
 - Evaluate importing from photos or PDFs.
 - Explore annotations or other lightweight editing that fits the current architecture.
 
 Prompt:
 
-Implement the next phase for Scan Man using Apple frameworks only. Preserve the local-first architecture while evaluating optional sync, broader import sources, and lightweight annotation or editing features that build on the existing scan, OCR, and export flows.
+Implement the next phase for Scan Man using Apple frameworks first. Preserve the local-first architecture while evaluating optional sync, broader import sources, lightweight annotation or editing features, and the export decision space. Treat Apple-native share/export support as the baseline, document the complexity tradeoffs of direct Nextcloud and Syncthing integrations, and only implement provider-specific export if it clearly adds workflow value beyond the standard system flows.
+
+### Phase 6: Rollout Preparation
+
+Goal:
+
+- Prepare Scan Man for real-user rollout through TestFlight and App Store submission.
+
+Requirements:
+
+- Stabilize the product around the delivered scan, OCR, editing, and export feature set.
+- Audit release-blocking UX issues: permission prompts, empty states, error recovery, and first-run guidance.
+- Finalize release assets and compliance items:
+  - app name, bundle identifier, versioning, icons, screenshots, and App Store copy
+  - privacy policy URL and App Privacy details
+  - export compliance answers for submission
+- Build a rollout checklist covering internal beta, external TestFlight, crash and feedback triage, and go/no-go criteria.
+- Expand validation with release-focused unit, UI, and device smoke tests.
+
+Prompt:
+
+Implement Phase 6 for Scan Man as a rollout-preparation phase. Focus on release hardening, TestFlight readiness, App Store metadata and compliance preparation, and a practical staged rollout plan. Do not add large net-new product scope unless it directly reduces rollout risk.

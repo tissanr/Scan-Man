@@ -7,6 +7,7 @@
 - Delivered: Phase 3
 - Delivered: Phase 4
 - Next: Phase 5
+- Planned: Phase 6
 
 ## Phase 1
 
@@ -38,6 +39,20 @@
 
 ## Phase 5
 
-- Evaluate optional iCloud sync.
+- Keep Apple standard export options as the baseline export story.
+- Evaluate export destinations by implementation complexity:
+  - Lowest complexity: share sheet and Files-based export to any installed provider the system already exposes.
+  - Medium complexity: saved export destinations or repeat-export workflows built on Apple document APIs.
+  - Higher complexity: direct Nextcloud upload over WebDAV with account and error handling.
+  - Highest complexity: Syncthing-specific export or sync flows, which likely need a companion process or a filesystem handoff design.
 - Consider import from photos or PDFs.
 - Explore annotations or lightweight editing.
+- Decide which export paths belong in v1 versus post-v1.
+
+## Phase 6
+
+- Prepare the app for rollout through TestFlight and App Store distribution.
+- Harden onboarding, permissions, error states, and empty states.
+- Finalize app identity assets, privacy disclosures, export compliance answers, and release metadata.
+- Expand release-oriented validation: device testing, migration checks, export/import smoke tests, and crash review.
+- Define a staged rollout plan with internal beta, external beta, feedback triage, and release criteria.
