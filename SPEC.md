@@ -85,6 +85,8 @@ Requirements:
   - High complexity: Syncthing-specific export or sync, because iOS does not provide a native Syncthing framework and the app would need either a companion-app handoff or a constrained filesystem-based workflow.
 - Prefer generic Apple document flows over provider-specific integrations unless a provider unlocks meaningful workflow value beyond the system share/export options.
 - Evaluate importing from photos or PDFs.
+- Expose any app-managed import folder clearly if the product relies on one, including where it appears in Files and how items are consumed after import.
+- Support Apple share-menu intake for images and PDFs when it can feed the same local import/OCR pipeline safely.
 - Explore annotations or other lightweight editing that fits the current architecture.
 
 Prompt:

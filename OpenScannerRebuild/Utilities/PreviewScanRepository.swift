@@ -8,6 +8,7 @@ struct PreviewScanRepository: ScanRepository {
                 createdAt: Date(),
                 updatedAt: Date(),
                 title: "Receipt",
+                notes: "Preview note",
                 pages: [
                     ScanPage(
                         id: UUID(),
@@ -31,6 +32,9 @@ struct PreviewScanRepository: ScanRepository {
     }
 
     func updateTitle(scanID: UUID, title: String) async throws {
+    }
+
+    func updateNotes(scanID: UUID, notes: String) async throws {
     }
 
     func updateRecognizedText(scanID: UUID, pageID: UUID, text: String) async throws {

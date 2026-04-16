@@ -30,7 +30,7 @@ struct ScanDomainTests {
     @Test
     func searchBehaviorMatchesTitleAndOCRText() async {
         let repository = StubScanRepository(scans: [
-            TestData.scan(title: "Tax Receipt", pages: [TestData.page(order: 0, text: "Coffee beans")]),
+            TestData.scan(title: "Tax Receipt", notes: "Filed under 2026", pages: [TestData.page(order: 0, text: "Coffee beans")]),
             TestData.scan(title: "Meeting Notes", pages: [TestData.page(order: 0, text: "Quarterly planning")])
         ])
         let viewModel = HomeViewModel(
@@ -38,7 +38,8 @@ struct ScanDomainTests {
             titleSuggester: TitleSuggestionService(),
             ocrProcessor: StubOCRProcessor(result: ScanOCRProcessingResult(scan: TestData.scan(title: "Imported", pages: []), failedPageCount: 0)),
             scanDeviceSupport: StubDeviceSupport(canScanDocuments: true),
-            scanImporter: StubScanImporter(result: .success(TestData.scan(title: "Imported", pages: [])))
+            scanImporter: StubScanImporter(result: .success(TestData.scan(title: "Imported", pages: []))),
+            importInbox: StubImportInbox()
         )
 
         await viewModel.load()
@@ -46,6 +47,28 @@ struct ScanDomainTests {
 
         #expect(viewModel.filteredScans.count == 1)
         #expect(viewModel.filteredScans.first?.title == "Tax Receipt")
+    }
+
+    @Test
+    func searchBehaviorMatchesNotes() async {
+        let repository = StubScanRepository(scans: [
+            TestData.scan(title: "Receipt", notes: "Reimburse on Friday", pages: [TestData.page(order: 0, text: "Coffee beans")]),
+            TestData.scan(title: "Meeting Notes", pages: [TestData.page(order: 0, text: "Quarterly planning")])
+        ])
+        let viewModel = HomeViewModel(
+            repository: repository,
+            titleSuggester: TitleSuggestionService(),
+            ocrProcessor: StubOCRProcessor(result: ScanOCRProcessingResult(scan: TestData.scan(title: "Imported", pages: []), failedPageCount: 0)),
+            scanDeviceSupport: StubDeviceSupport(canScanDocuments: true),
+            scanImporter: StubScanImporter(result: .success(TestData.scan(title: "Imported", pages: []))),
+            importInbox: StubImportInbox()
+        )
+
+        await viewModel.load()
+        viewModel.searchText = "reimburse"
+
+        #expect(viewModel.filteredScans.count == 1)
+        #expect(viewModel.filteredScans.first?.title == "Receipt")
     }
 
     @Test
@@ -116,6 +139,35 @@ struct ScanDomainTests {
         ]
 
         let scan = try service.makeScanDocument(from: images, createdAt: Date(timeIntervalSince1970: 0))
+
+        #expect(scan.pages.map(\.order) == [0, 1])
+        #expect(scan.pages.allSatisfy { !$0.imageData.isEmpty })
+        #expect(scan.pages.allSatisfy { !$0.thumbnailData.isEmpty })
+    }
+
+    @Test
+    func pdfImportCreatesPagesThatMatchTheExistingScanModel() throws {
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 300, height: 400))
+        let pdfData = renderer.pdfData { context in
+            context.beginPage()
+            UIColor.white.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 300, height: 400))
+            NSString(string: "Page One").draw(at: CGPoint(x: 24, y: 24), withAttributes: [
+                .font: UIFont.systemFont(ofSize: 24),
+                .foregroundColor: UIColor.black
+            ])
+
+            context.beginPage()
+            UIColor.white.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 300, height: 400))
+            NSString(string: "Page Two").draw(at: CGPoint(x: 24, y: 24), withAttributes: [
+                .font: UIFont.systemFont(ofSize: 24),
+                .foregroundColor: UIColor.black
+            ])
+        }
+
+        let service = ScanImportService()
+        let scan = try service.makeScanDocument(fromPDFData: pdfData, createdAt: Date(timeIntervalSince1970: 0))
 
         #expect(scan.pages.map(\.order) == [0, 1])
         #expect(scan.pages.allSatisfy { !$0.imageData.isEmpty })

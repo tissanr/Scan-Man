@@ -9,6 +9,7 @@ struct AppDependencies {
     let ocrProcessor: ScanOCRProcessing
     let scanDeviceSupport: ScanDeviceSupporting
     let scanImporter: ScanImporting
+    let importInbox: ImportInboxManaging
 
     static func live() -> AppDependencies {
         let persistenceController = PersistenceController()
@@ -23,7 +24,8 @@ struct AppDependencies {
             titleSuggester: titleSuggester,
             ocrProcessor: ScanOCRProcessor(recognizer: ocrService, titleSuggester: titleSuggester),
             scanDeviceSupport: ScanDeviceSupport(),
-            scanImporter: ScanImportService()
+            scanImporter: ScanImportService(),
+            importInbox: ImportInboxService()
         )
     }
 }

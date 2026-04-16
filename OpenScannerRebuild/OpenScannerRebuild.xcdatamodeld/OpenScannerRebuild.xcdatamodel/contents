@@ -3,6 +3,7 @@
     <entity name="ScanEntity" representedClassName="ScanEntity" syncable="YES" codeGenerationType="class">
         <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="notes" optional="NO" attributeType="String" defaultValueString=""/>
         <attribute name="title" optional="NO" attributeType="String"/>
         <attribute name="updatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <relationship name="pages" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ScanPageEntity" inverseName="scan" inverseEntity="ScanPageEntity"/>
@@ -18,7 +19,7 @@
         <relationship name="scan" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="ScanEntity" inverseName="pages" inverseEntity="ScanEntity"/>
     </entity>
     <elements>
-        <element name="ScanEntity" positionX="-63" positionY="-18" width="128" height="118"/>
+        <element name="ScanEntity" positionX="-63" positionY="-18" width="128" height="133"/>
         <element name="ScanPageEntity" positionX="170" positionY="-18" width="128" height="148"/>
     </elements>
 </model>

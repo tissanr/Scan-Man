@@ -10,7 +10,8 @@ struct RootView: View {
                 titleSuggester: dependencies.titleSuggester,
                 ocrProcessor: dependencies.ocrProcessor,
                 scanDeviceSupport: dependencies.scanDeviceSupport,
-                scanImporter: dependencies.scanImporter
+                scanImporter: dependencies.scanImporter,
+                importInbox: dependencies.importInbox
             ),
             detailFactory: { scan in
                 ScanDetailView(

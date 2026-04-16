@@ -46,6 +46,8 @@
   - Higher complexity: direct Nextcloud upload over WebDAV with account and error handling.
   - Highest complexity: Syncthing-specific export or sync flows, which likely need a companion process or a filesystem handoff design.
 - Consider import from photos or PDFs.
+- Expose a Files-visible import inbox if folder-based import is part of the workflow.
+- Support share-menu intake for images and PDFs through the same local import pipeline.
 - Explore annotations or lightweight editing.
 - Decide which export paths belong in v1 versus post-v1.
 

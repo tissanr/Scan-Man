@@ -1,8 +1,13 @@
+import PhotosUI
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct HomeView<Detail: View>: View {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var viewModel: HomeViewModel
     @State private var navigationPath: [ScanDocument] = []
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    @State private var isShowingPDFImporter = false
     let detailFactory: (ScanDocument) -> Detail
 
     init(viewModel: HomeViewModel, detailFactory: @escaping (ScanDocument) -> Detail) {
@@ -57,13 +62,32 @@ struct HomeView<Detail: View>: View {
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 8) {
-                Button {
-                    viewModel.beginScan()
+                Menu {
+                    Button {
+                        viewModel.beginScan()
+                    } label: {
+                        Label("Scan Document", systemImage: "plus.viewfinder")
+                    }
+
+                    PhotosPicker(
+                        selection: $selectedPhotoItems,
+                        maxSelectionCount: 24,
+                        matching: .images
+                    ) {
+                        Label("Import Photos", systemImage: "photo.on.rectangle")
+                    }
+
+                    Button {
+                        isShowingPDFImporter = true
+                    } label: {
+                        Label("Import PDF", systemImage: "doc.richtext")
+                    }
                 } label: {
-                    Label("Scan", systemImage: "plus.viewfinder")
+                    Label(viewModel.isImporting ? "Working..." : "Add Scan", systemImage: "plus.viewfinder")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .disabled(viewModel.isImporting)
                 .accessibilityLabel(viewModel.scanButtonAccessibilityLabel)
 
                 if let scanSupportMessage = viewModel.scanSupportMessage {
@@ -73,6 +97,12 @@ struct HomeView<Detail: View>: View {
                         .multilineTextAlignment(.center)
                         .accessibilityLabel("Scanning availability")
                 }
+
+                Text("Import folder: \(viewModel.importFolderDisplayPath)")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .accessibilityLabel("Import folder path")
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -81,6 +111,15 @@ struct HomeView<Detail: View>: View {
         }
         .task {
             await viewModel.load()
+        }
+        .onChange(of: scenePhase) {
+            guard scenePhase == .active else {
+                return
+            }
+
+            Task {
+                await viewModel.refreshImportSources()
+            }
         }
         .onChange(of: viewModel.pendingNavigationScan) {
             let scan = viewModel.pendingNavigationScan
@@ -113,6 +152,35 @@ struct HomeView<Detail: View>: View {
                 }
             )
         }
+        .fileImporter(
+            isPresented: $isShowingPDFImporter,
+            allowedContentTypes: [.pdf],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else {
+                    return
+                }
+
+                Task {
+                    await importPDF(at: url)
+                }
+            case .failure(let error):
+                viewModel.handleScanFailure(error)
+            }
+        }
+        .onChange(of: selectedPhotoItems) {
+            let items = selectedPhotoItems
+            guard !items.isEmpty else {
+                return
+            }
+
+            Task {
+                await importPhotos(from: items)
+                selectedPhotoItems = []
+            }
+        }
         .alert(
             "Open Scanner",
             isPresented: Binding(
@@ -132,6 +200,42 @@ struct HomeView<Detail: View>: View {
                 Text(viewModel.activeErrorMessage ?? "")
             }
         )
+    }
+
+    private func importPhotos(from items: [PhotosPickerItem]) async {
+        let loadedData = await withTaskGroup(of: Data?.self) { group in
+            for item in items {
+                group.addTask {
+                    try? await item.loadTransferable(type: Data.self)
+                }
+            }
+
+            var results: [Data] = []
+            for await data in group {
+                if let data {
+                    results.append(data)
+                }
+            }
+            return results
+        }
+
+        await viewModel.importPhotos(from: loadedData)
+    }
+
+    private func importPDF(at url: URL) async {
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if didAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        do {
+            let data = try Data(contentsOf: url)
+            await viewModel.handleImportedPDF(data)
+        } catch {
+            viewModel.handleScanFailure(error)
+        }
     }
 }
 

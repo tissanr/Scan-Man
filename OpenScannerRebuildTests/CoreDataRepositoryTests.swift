@@ -36,6 +36,18 @@ struct CoreDataRepositoryTests {
     }
 
     @Test
+    func repositoryPersistsNotes() async throws {
+        let persistence = PersistenceController(inMemory: true)
+        let repository = CoreDataScanRepository(persistenceController: persistence)
+        let scan = TestData.scan(title: "Single", notes: "Client copy", pages: [TestData.page(order: 0, text: "Hello")])
+
+        try await repository.save(scan: scan)
+        let loaded = try await repository.fetchScan(id: scan.id)
+
+        #expect(loaded?.notes == "Client copy")
+    }
+
+    @Test
     func repositoryPersistsOCRGeometry() async throws {
         let persistence = PersistenceController(inMemory: true)
         let repository = CoreDataScanRepository(persistenceController: persistence)
@@ -69,5 +81,18 @@ struct CoreDataRepositoryTests {
 
         #expect(loaded?.pages.first?.recognizedText == "After\nEdit")
         #expect(loaded?.pages.last?.recognizedText == "Untouched")
+    }
+
+    @Test
+    func repositoryUpdatesNotesForScan() async throws {
+        let persistence = PersistenceController(inMemory: true)
+        let repository = CoreDataScanRepository(persistenceController: persistence)
+        let scan = TestData.scan(title: "Editable", pages: [TestData.page(order: 0, text: "Before")])
+
+        try await repository.save(scan: scan)
+        try await repository.updateNotes(scanID: scan.id, notes: "  Shared with legal  ")
+        let loaded = try await repository.fetchScan(id: scan.id)
+
+        #expect(loaded?.notes == "Shared with legal")
     }
 }

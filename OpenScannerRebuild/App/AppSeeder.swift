@@ -43,6 +43,7 @@ enum AppSeeder {
             createdAt: Date(),
             updatedAt: Date(),
             title: "Seeded Invoice",
+            notes: "Seeded for UI testing",
             pages: [page]
         )
 

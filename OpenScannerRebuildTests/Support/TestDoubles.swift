@@ -23,6 +23,14 @@ final class StubScanRepository: ScanRepository {
     func updateTitle(scanID: UUID, title: String) async throws {
     }
 
+    func updateNotes(scanID: UUID, notes: String) async throws {
+        guard let scanIndex = storedScans.firstIndex(where: { $0.id == scanID }) else {
+            return
+        }
+
+        storedScans[scanIndex].notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     func updateRecognizedText(scanID: UUID, pageID: UUID, text: String) async throws {
         guard let scanIndex = storedScans.firstIndex(where: { $0.id == scanID }),
               let pageIndex = storedScans[scanIndex].pages.firstIndex(where: { $0.id == pageID }) else {
@@ -49,6 +57,24 @@ struct StubScanImporter: ScanImporting {
 
     func makeScanDocument(from images: [UIImage], createdAt: Date) throws -> ScanDocument {
         try result.get()
+    }
+
+    func makeScanDocument(fromPDFData pdfData: Data, createdAt: Date) throws -> ScanDocument {
+        try result.get()
+    }
+}
+
+struct StubImportInbox: ImportInboxManaging {
+    var importFolderDisplayPath: String { "Files > On My iPhone > Scan Man > Scan Man Imports" }
+
+    func prepareImportLocations() throws {
+    }
+
+    func pendingImports() throws -> [PendingImportItem] {
+        []
+    }
+
+    func removeImportedItem(_ item: PendingImportItem) throws {
     }
 }
 

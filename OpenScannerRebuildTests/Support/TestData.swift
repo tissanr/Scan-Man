@@ -3,12 +3,13 @@ import UIKit
 @testable import OpenScannerRebuild
 
 enum TestData {
-    static func scan(title: String, pages: [ScanPage]) -> ScanDocument {
+    static func scan(title: String, notes: String = "", pages: [ScanPage]) -> ScanDocument {
         ScanDocument(
             id: UUID(),
             createdAt: Date(),
             updatedAt: Date(),
             title: title,
+            notes: notes,
             pages: pages
         )
     }

@@ -3,6 +3,8 @@ import UIKit
 
 struct ScanDetailView: View {
     @StateObject private var viewModel: ScanDetailViewModel
+    @State private var notesDraft = ""
+    @State private var isSavingNotes = false
 
     init(viewModel: ScanDetailViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -22,6 +24,30 @@ struct ScanDetailView: View {
                             await viewModel.saveTitle()
                         }
                     }
+            }
+
+            Section("Notes") {
+                TextEditor(text: $notesDraft)
+                    .frame(minHeight: 120)
+                    .accessibilityLabel("Scan notes editor")
+
+                Text("Lightweight notes stay local and become searchable with the rest of the scan.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                Button(isSavingNotes ? "Saving..." : "Save Notes") {
+                    Task {
+                        viewModel.notes = notesDraft
+                        isSavingNotes = true
+                        let didSave = await viewModel.saveNotes()
+                        isSavingNotes = false
+                        if didSave {
+                            notesDraft = viewModel.notes
+                        }
+                    }
+                }
+                .disabled(isSavingNotes || normalizedNotesDraft == normalizedStoredNotes)
+                .accessibilityLabel("Save notes")
             }
 
             Section("Pages") {
@@ -84,6 +110,7 @@ struct ScanDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await viewModel.refresh()
+            notesDraft = viewModel.notes
         }
         .sheet(
             isPresented: Binding(
@@ -130,5 +157,13 @@ struct ScanDetailView: View {
             Rectangle()
                 .fill(Color.secondary.opacity(0.15))
         }
+    }
+
+    private var normalizedNotesDraft: String {
+        notesDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var normalizedStoredNotes: String {
+        viewModel.notes.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

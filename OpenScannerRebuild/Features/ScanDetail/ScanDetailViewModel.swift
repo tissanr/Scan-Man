@@ -25,6 +25,15 @@ final class ScanDetailViewModel: ObservableObject {
         }
     }
 
+    var notes: String {
+        get { scan.notes }
+        set {
+            var updated = scan
+            updated.notes = newValue
+            scan = updated
+        }
+    }
+
     func saveTitle() async {
         do {
             try await repository.updateTitle(scanID: scan.id, title: scan.title)
@@ -40,6 +49,24 @@ final class ScanDetailViewModel: ObservableObject {
             }
         } catch {
             activeErrorMessage = "Unable to refresh this scan."
+        }
+    }
+
+    func saveNotes() async -> Bool {
+        let trimmedNotes = scan.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        let originalScan = scan
+        var updatedScan = scan
+        updatedScan.notes = trimmedNotes
+        updatedScan.updatedAt = Date()
+        scan = updatedScan
+
+        do {
+            try await repository.updateNotes(scanID: scan.id, notes: trimmedNotes)
+            return true
+        } catch {
+            scan = originalScan
+            activeErrorMessage = "Unable to save notes."
+            return false
         }
     }
 

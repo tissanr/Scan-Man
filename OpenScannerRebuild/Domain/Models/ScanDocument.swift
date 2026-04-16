@@ -5,6 +5,7 @@ struct ScanDocument: Identifiable, Equatable, Sendable {
     let createdAt: Date
     var updatedAt: Date
     var title: String
+    var notes: String
     var pages: [ScanPage]
 
     var previewText: String {
@@ -12,7 +13,7 @@ struct ScanDocument: Identifiable, Equatable, Sendable {
     }
 
     var searchText: String {
-        ([title] + pages.map(\.recognizedText))
+        ([title, notes] + pages.map(\.recognizedText))
             .joined(separator: "\n")
             .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
     }

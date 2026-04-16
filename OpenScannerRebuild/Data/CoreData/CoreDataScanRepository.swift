@@ -32,6 +32,7 @@ struct CoreDataScanRepository: ScanRepository {
             entity.createdAt = scan.createdAt
             entity.updatedAt = scan.updatedAt
             entity.title = scan.title
+            entity.notes = scan.notes
 
             entity.orderedPages.forEach(context.delete)
 
@@ -58,6 +59,19 @@ struct CoreDataScanRepository: ScanRepository {
             }
 
             entity.title = title
+            entity.updatedAt = Date()
+        }
+    }
+
+    func updateNotes(scanID: UUID, notes: String) async throws {
+        _ = try await persistenceController.performBackgroundTask { context in
+            let request = ScanEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "id == %@", scanID as CVarArg)
+            guard let entity = try context.fetch(request).first else {
+                return
+            }
+
+            entity.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
             entity.updatedAt = Date()
         }
     }
@@ -103,6 +117,7 @@ private extension ScanEntity {
             createdAt: createdAt ?? .distantPast,
             updatedAt: updatedAt ?? .distantPast,
             title: title ?? "Untitled Scan",
+            notes: notes ?? "",
             pages: orderedPages.map {
                 ScanPage(
                     id: $0.id ?? UUID(),

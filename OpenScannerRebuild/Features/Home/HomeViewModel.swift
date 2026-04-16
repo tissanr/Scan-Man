@@ -9,19 +9,22 @@ final class HomeViewModel: ObservableObject {
     private let ocrProcessor: ScanOCRProcessing
     private let scanDeviceSupport: ScanDeviceSupporting
     private let scanImporter: ScanImporting
+    private let importInbox: ImportInboxManaging
 
     @Published private(set) var scans: [ScanDocument] = []
     @Published var searchText = ""
     @Published private(set) var activeErrorMessage: String?
     @Published private(set) var isShowingScanner = false
+    @Published private(set) var isImporting = false
     @Published private(set) var pendingNavigationScan: ScanDocument?
 
-    init(repository: ScanRepository, titleSuggester: TitleSuggesting, ocrProcessor: ScanOCRProcessing, scanDeviceSupport: ScanDeviceSupporting, scanImporter: ScanImporting) {
+    init(repository: ScanRepository, titleSuggester: TitleSuggesting, ocrProcessor: ScanOCRProcessing, scanDeviceSupport: ScanDeviceSupporting, scanImporter: ScanImporting, importInbox: ImportInboxManaging) {
         self.repository = repository
         self.titleSuggester = titleSuggester
         self.ocrProcessor = ocrProcessor
         self.scanDeviceSupport = scanDeviceSupport
         self.scanImporter = scanImporter
+        self.importInbox = importInbox
     }
 
     var filteredScans: [ScanDocument] {
@@ -46,11 +49,26 @@ final class HomeViewModel: ObservableObject {
         return scanDeviceSupport.unavailableMessage
     }
 
+    var importFolderDisplayPath: String {
+        importInbox.importFolderDisplayPath
+    }
+
     func load() async {
         do {
+            try importInbox.prepareImportLocations()
             scans = try await repository.fetchScans()
+            await importPendingInboxItems()
         } catch {
             activeErrorMessage = "Unable to load scans right now."
+        }
+    }
+
+    func refreshImportSources() async {
+        do {
+            try importInbox.prepareImportLocations()
+            await importPendingInboxItems()
+        } catch {
+            activeErrorMessage = "Unable to read the Scan Man import folder right now."
         }
     }
 
@@ -83,18 +101,25 @@ final class HomeViewModel: ObservableObject {
 
     func handleScan(images: [UIImage]) async {
         isShowingScanner = false
+        await importScanDocument(from: .images(images))
+    }
 
-        do {
-            let scan = try scanImporter.makeScanDocument(from: images, createdAt: Date())
-            try await repository.save(scan: scan)
-            scans.insert(scan, at: 0)
-            pendingNavigationScan = scan
-            Task {
-                await processOCR(for: scan)
-            }
-        } catch {
-            activeErrorMessage = error.localizedDescription.isEmpty ? "Open Scanner could not save this scan." : error.localizedDescription
+    func handleImportedImages(_ images: [UIImage]) async {
+        await importScanDocument(from: .images(images))
+    }
+
+    func handleImportedPDF(_ pdfData: Data) async {
+        await importScanDocument(from: .pdf(pdfData))
+    }
+
+    func importPhotos(from itemData: [Data]) async {
+        let images = itemData.compactMap(UIImage.init(data:))
+        guard !images.isEmpty else {
+            activeErrorMessage = "Open Scanner could not import those photos."
+            return
         }
+
+        await handleImportedImages(images)
     }
 
     func dismissError() {
@@ -128,5 +153,79 @@ final class HomeViewModel: ObservableObject {
         } catch {
             activeErrorMessage = "The scan was saved, but OCR results could not be stored."
         }
+    }
+
+    private func importScanDocument(from source: ImportSource) async {
+        isImporting = true
+        defer { isImporting = false }
+
+        do {
+            let createdAt = Date()
+            let scan: ScanDocument
+            switch source {
+            case .images(let images):
+                scan = try scanImporter.makeScanDocument(from: images, createdAt: createdAt)
+            case .pdf(let data):
+                scan = try scanImporter.makeScanDocument(fromPDFData: data, createdAt: createdAt)
+            }
+
+            try await repository.save(scan: scan)
+            scans.insert(scan, at: 0)
+            pendingNavigationScan = scan
+            Task {
+                await processOCR(for: scan)
+            }
+        } catch {
+            activeErrorMessage = error.localizedDescription.isEmpty ? "Open Scanner could not import that document." : error.localizedDescription
+        }
+    }
+
+    private func importPendingInboxItems() async {
+        let items: [PendingImportItem]
+        do {
+            items = try importInbox.pendingImports()
+        } catch {
+            activeErrorMessage = "Unable to read pending imports."
+            return
+        }
+
+        guard !items.isEmpty else {
+            return
+        }
+
+        for item in items {
+            do {
+                let data = try Data(contentsOf: item.url)
+                let createdAt = Date()
+                let scan: ScanDocument
+
+                switch item.kind {
+                case .image:
+                    guard let image = UIImage(data: data) else {
+                        throw ScanImportError.imageEncodingFailed(pageIndex: 0)
+                    }
+                    scan = try scanImporter.makeScanDocument(from: [image], createdAt: createdAt)
+                case .pdf:
+                    scan = try scanImporter.makeScanDocument(fromPDFData: data, createdAt: createdAt)
+                }
+
+                try await repository.save(scan: scan)
+                scans.insert(scan, at: 0)
+                try importInbox.removeImportedItem(item)
+
+                Task {
+                    await processOCR(for: scan)
+                }
+            } catch {
+                activeErrorMessage = "Open Scanner could not import one of the files from the Scan Man import folder."
+            }
+        }
+    }
+}
+
+private extension HomeViewModel {
+    enum ImportSource {
+        case images([UIImage])
+        case pdf(Data)
     }
 }
