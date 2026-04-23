@@ -18,6 +18,7 @@ struct ScanListRow: View {
                 Text(scan.title)
                     .font(.headline)
                     .foregroundStyle(.primary)
+                    .accessibilityIdentifier("ScanTitle")
 
                 Text(scan.updatedAt.scanTimestampLabel)
                     .font(.subheadline)

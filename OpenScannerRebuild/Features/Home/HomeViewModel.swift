@@ -56,6 +56,7 @@ final class HomeViewModel: ObservableObject {
     func load() async {
         do {
             try importInbox.prepareImportLocations()
+            await AppSeeder.seedIfNeeded(using: repository)
             scans = try await repository.fetchScans()
             await importPendingInboxItems()
         } catch {

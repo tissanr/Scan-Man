@@ -23,8 +23,5 @@ struct RootView: View {
                 )
             }
         )
-        .task {
-            await AppSeeder.seedIfNeeded(using: dependencies.repository)
-        }
     }
 }

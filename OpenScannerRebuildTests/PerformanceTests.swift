@@ -30,7 +30,7 @@ final class PerformanceTests: XCTestCase {
         measure {
             let expectation = expectation(description: "Export")
             Task {
-                _ = try? await exporter.exportAsSearchablePDF(scan: scan)
+                _ = try? exporter.export(scan: scan, mode: .searchable)
                 expectation.fulfill()
             }
             wait(for: [expectation], timeout: 10.0)

@@ -2,7 +2,7 @@
 
 PROJECT = OpenScannerRebuild.xcodeproj
 SCHEME = OpenScannerRebuild
-SIMULATOR = platform=iOS Simulator,name=iPhone 16,OS=18.0
+SIMULATOR = platform=iOS Simulator,name=iPhone 15
 
 help:
 	@echo "Available commands:"
@@ -17,7 +17,7 @@ build:
 	xcodebuild build -project $(PROJECT) -scheme $(SCHEME) -destination '$(SIMULATOR)' CODE_SIGNING_ALLOWED=NO
 
 test:
-	xcodebuild test -project $(PROJECT) -scheme $(SCHEME) -destination '$(SIMULATOR)' CODE_SIGNING_ALLOWED=NO
+	xcodebuild test -project $(PROJECT) -scheme $(SCHEME) -destination '$(SIMULATOR)' CODE_SIGNING_ALLOWED=NO -enableCodeCoverage YES -parallel-testing-enabled NO
 
 clean:
 	xcodebuild clean -project $(PROJECT) -scheme $(SCHEME)

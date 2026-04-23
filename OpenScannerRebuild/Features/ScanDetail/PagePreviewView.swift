@@ -23,11 +23,13 @@ struct PagePreviewView: View {
                                 containerSize: geometry.size,
                                 selectedObservationID: selectedObservationID
                             )
+                            .accessibilityIdentifier("Detected Layout")
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Color.black)
                     }
                 }
+                .accessibilityIdentifier("Page preview")
                 .background(Color.black.ignoresSafeArea())
             } else {
                 ContentUnavailableStateView(
