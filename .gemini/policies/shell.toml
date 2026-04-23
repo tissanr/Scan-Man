@@ -1,0 +1,11 @@
+[[rule]]
+name = "Allow standard dev commands"
+description = "Allow make and git status/diff for local development"
+command = "^(make|git status|git diff)"
+action = "allow"
+
+[[rule]]
+name = "Protect sensitive files"
+description = "Always ask before writing to GEMINI.md or policies"
+file = "^(GEMINI\\.md|\\.gemini/policies/.*)"
+action = "ask_user"

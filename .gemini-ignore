@@ -1,0 +1,13 @@
+# Ignore build artifacts
+.build/
+DerivedData/
+*.xcresult/
+*.xcuserstate
+
+# Project-specific ignores
+OpenScannerRebuild.xcodeproj/project.xcworkspace/
+OpenScannerRebuild.xcodeproj/xcuserdata/
+
+# Standard ignores
+.DS_Store
+.git/
