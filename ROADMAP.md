@@ -6,8 +6,9 @@
 - Delivered: Phase 2
 - Delivered: Phase 3
 - Delivered: Phase 4
+- Delivered: Phase 7
 - Next: Phase 5
-- Planned: Phase 6
+- Planned: Phase 6, Phase 8, Phase 9
 
 ## Phase 1
 
@@ -58,3 +59,25 @@
 - Finalize app identity assets, privacy disclosures, export compliance answers, and release metadata.
 - Expand release-oriented validation: device testing, migration checks, export/import smoke tests, and crash review.
 - Define a staged rollout plan with internal beta, external beta, feedback triage, and release criteria.
+
+## Phase 7: Core Infrastructure & Performance
+
+- Automate testing with GitHub Actions CI.
+- Implement structured logging with `OSLog` and categorized categories.
+- Define unified `AppError` architecture.
+- Establish performance benchmarks for Core Data and PDF export.
+- Status: delivered
+
+## Phase 8: Developer Tooling & Documentation
+
+- Create a `Makefile` for standardized task execution.
+- Implement Apple DocC for API documentation.
+- Refactor Dependency Injection for enhanced testability.
+- Automate screenshot generation for App Store assets.
+
+## Phase 9: Advanced Validation & Accessibility
+
+- Implement Core Data migration verification tests.
+- Integrate automated accessibility audits into UI tests.
+- Add code coverage monitoring and reporting.
+- Implement snapshot testing for OCR overlays and UI components.
