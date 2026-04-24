@@ -60,3 +60,26 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Xcode derived data & archives
+DerivedData/
+*.xcarchive
+*.xcresult
+
+# Simulator
+*.app
+
+# SwiftPM
+.swiftpm/
+Package.resolved
+
+# Environment / secrets
+.env
+*.env.local
+
+# Claude Code
+.claude/worktrees/
