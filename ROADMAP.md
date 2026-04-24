@@ -9,7 +9,7 @@
 - Delivered: Phase 7
 - Delivered: Phase 8
 - Delivered: Phase 9
-- Next: Phase 5
+- Delivered: Phase 5
 - Planned: Phase 6
 
 ## Phase 1
@@ -53,6 +53,7 @@
 - Support share-menu intake for images and PDFs through the same local import pipeline.
 - Explore annotations or lightweight editing.
 - Decide which export paths belong in v1 versus post-v1.
+- Status: delivered
 
 ## Phase 6
 
