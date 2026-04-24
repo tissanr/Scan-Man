@@ -2,7 +2,7 @@
 
 PROJECT = OpenScannerRebuild.xcodeproj
 SCHEME = OpenScannerRebuild
-SIMULATOR = platform=iOS Simulator,name=iPhone 15
+SIMULATOR = platform=iOS Simulator,name=iPhone 16
 
 help:
 	@echo "Available commands:"
