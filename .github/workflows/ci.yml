@@ -21,7 +21,7 @@ jobs:
         xcodebuild test \
           -project OpenScannerRebuild.xcodeproj \
           -scheme OpenScannerRebuild \
-          -destination 'platform=iOS Simulator,name=iPhone 16' \
+          -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \
           -resultBundlePath TestResults.xcresult \
           -enableCodeCoverage YES \
           -parallel-testing-enabled NO \

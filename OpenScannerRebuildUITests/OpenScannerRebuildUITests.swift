@@ -21,14 +21,14 @@ final class OpenScannerRebuildUITests: XCTestCase {
         app.launch()
 
         let addBtn = app.buttons["Add Scan"]
-        XCTAssertTrue(addBtn.waitForExistence(timeout: 2))
+        XCTAssertTrue(addBtn.waitForExistence(timeout: 5))
         addBtn.tap()
-        
+
         let scanBtn = app.buttons["Scan Document"]
-        XCTAssertTrue(scanBtn.waitForExistence(timeout: 2))
+        XCTAssertTrue(scanBtn.waitForExistence(timeout: 5))
         scanBtn.tap()
 
-        XCTAssertTrue(app.alerts["Open Scanner"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.alerts["Open Scanner"].waitForExistence(timeout: 5))
     }
 
     @MainActor

@@ -13,7 +13,7 @@ final class AccessibilityTests: XCTestCase {
         
         try app.performAccessibilityAudit { issue in
             // Skip noisy contrast and element detection issues in simulator
-            return issue.auditType != .contrast && issue.auditType != .elementDetection
+            return issue.auditType == .contrast || issue.auditType == .elementDetection
         }
     }
 
@@ -27,7 +27,7 @@ final class AccessibilityTests: XCTestCase {
         app.staticTexts["Seeded Invoice"].tap()
         
         try app.performAccessibilityAudit { issue in
-            return issue.auditType != .contrast && issue.auditType != .elementDetection
+            return issue.auditType == .contrast || issue.auditType == .elementDetection
         }
     }
 
@@ -45,7 +45,7 @@ final class AccessibilityTests: XCTestCase {
         openBtn.tap()
         
         try app.performAccessibilityAudit { issue in
-            return issue.auditType != .contrast && issue.auditType != .elementDetection
+            return issue.auditType == .contrast || issue.auditType == .elementDetection
         }
     }
 }
