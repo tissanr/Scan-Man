@@ -39,22 +39,14 @@
 - Allow lightweight editing of extracted page text where practical.
 - Explore richer in-app OCR presentation using stored geometry.
 - Status: delivered
+## Phase 5: Optional Sync and Extended Inputs
 
-## Phase 5
+- Refactor import logic to group multiple shared/dropped images into a single multi-page scan.
+- Update Share Extension with robust activation rules for images and PDFs.
+- Enhance PDF import to reliably render all pages into a searchable scan document.
+- Status: delivered (Advanced cloud features moved to Phases 10-12)
 
-- Keep Apple standard export options as the baseline export story.
-- Evaluate export destinations by implementation complexity:
-  - Lowest complexity: share sheet and Files-based export to any installed provider the system already exposes.
-  - Medium complexity: saved export destinations or repeat-export workflows built on Apple document APIs.
-  - Higher complexity: direct Nextcloud upload over WebDAV with account and error handling.
-  - Highest complexity: Syncthing-specific export or sync flows, which likely need a companion process or a filesystem handoff design.
-- Consider import from photos or PDFs.
-- Expose a Files-visible import inbox if folder-based import is part of the workflow.
-- Support share-menu intake for images and PDFs through the same local import pipeline.
-- Explore annotations or lightweight editing.
-- Decide which export paths belong in v1 versus post-v1.
-
-## Phase 6
+## Phase 6: Rollout Preparation
 
 - Prepare the app for rollout through TestFlight and App Store distribution.
 - Harden onboarding, permissions, error states, and empty states.
@@ -85,3 +77,24 @@
 - Add code coverage monitoring and reporting.
 - Implement snapshot testing for OCR overlays and UI components.
 - Status: delivered
+
+## Phase 10: iCloud Sync (CloudKit)
+
+- Transition to `NSPersistentCloudKitContainer`.
+- Add opt-in sync toggle in app settings.
+- Implement background sync reconciliation.
+- Status: planned
+
+## Phase 11: WebDAV / Nextcloud Export
+
+- Implement custom `WebDAVClient` using `URLSession`.
+- Add configuration UI for private cloud credentials.
+- Implement direct-to-cloud PDF upload.
+- Status: planned
+
+## Phase 12: Auto-Export & Syncthing Helper
+
+- Implement background mirroring of scans to a user-defined Files directory.
+- Add directory picker for external sync folder selection.
+- Support automated workflows for Syncthing/Mobius Sync users.
+- Status: planned
