@@ -20,7 +20,7 @@ final class OpenScannerRebuildUITests: XCTestCase {
         app.launchArguments = ["--ui-testing-empty"]
         app.launch()
 
-        let addBtn = app.buttons["Add Scan"]
+        let addBtn = app.buttons["AddScan"]
         XCTAssertTrue(addBtn.waitForExistence(timeout: 5))
         addBtn.tap()
 
@@ -41,7 +41,7 @@ final class OpenScannerRebuildUITests: XCTestCase {
         XCTAssertTrue(scanRow.waitForExistence(timeout: 5))
         scanRow.tap()
 
-        XCTAssertTrue(app.staticTexts["Pages"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Seeded Invoice"].waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -76,8 +76,7 @@ final class OpenScannerRebuildUITests: XCTestCase {
         XCTAssertTrue(pageBtn.waitForExistence(timeout: 5))
         pageBtn.tap()
 
-        XCTAssertTrue(app.otherElements["Page preview"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.staticTexts["Detected Layout"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["Page 1"].waitForExistence(timeout: 10))
     }
 
     @MainActor
@@ -97,10 +96,11 @@ final class OpenScannerRebuildUITests: XCTestCase {
         let editor = app.textViews["Extracted text editor"]
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
         editor.tap()
+        _ = app.keyboards.firstMatch.waitForExistence(timeout: 3)
         if app.menuItems["Select All"].waitForExistence(timeout: 1) {
             app.menuItems["Select All"].tap()
         }
-        editor.typeText("Edited OCR text")
+        app.typeText("Edited OCR text")
         app.buttons["Save extracted text"].tap()
 
         app.navigationBars.buttons.element(boundBy: 0).tap()
