@@ -194,32 +194,79 @@ final class HomeViewModel: ObservableObject {
             return
         }
 
-        for item in items {
-            do {
-                let data = try Data(contentsOf: item.url)
-                let createdAt = Date()
-                let scan: ScanDocument
+        // Group items: PDFs are always separate scans.
+        // Images are grouped by source into a single multi-page scan.
+        let pdfItems = items.filter { $0.kind == .pdf }
+        let imageItemsBySource = Dictionary(grouping: items.filter { $0.kind == .image }, by: { $0.source })
 
-                switch item.kind {
-                case .image:
-                    guard let image = UIImage(data: data) else {
-                        throw ScanImportError.imageEncodingFailed(pageIndex: 0)
-                    }
-                    scan = try scanImporter.makeScanDocument(from: [image], createdAt: createdAt)
-                case .pdf:
-                    scan = try scanImporter.makeScanDocument(fromPDFData: data, createdAt: createdAt)
+        // Process PDF items
+        for item in pdfItems {
+            await importSingleFileItem(item)
+        }
+
+        // Process grouped image items
+        for (source, sourceItems) in imageItemsBySource {
+            await importGroupedImageItems(sourceItems, source: source)
+        }
+    }
+
+    private func importSingleFileItem(_ item: PendingImportItem) async {
+        do {
+            let data = try Data(contentsOf: item.url)
+            let createdAt = Date()
+            let scan: ScanDocument
+
+            switch item.kind {
+            case .image:
+                guard let image = UIImage(data: data) else {
+                    throw ScanImportError.imageEncodingFailed(pageIndex: 0)
                 }
-
-                try await repository.save(scan: scan)
-                scans.insert(scan, at: 0)
-                try importInbox.removeImportedItem(item)
-
-                Task {
-                    await processOCR(for: scan)
-                }
-            } catch {
-                activeErrorMessage = "Open Scanner could not import one of the files from the Scan Man import folder."
+                scan = try scanImporter.makeScanDocument(from: [image], createdAt: createdAt)
+            case .pdf:
+                scan = try scanImporter.makeScanDocument(fromPDFData: data, createdAt: createdAt)
             }
+
+            try await repository.save(scan: scan)
+            scans.insert(scan, at: 0)
+            try importInbox.removeImportedItem(item)
+
+            Task {
+                await processOCR(for: scan)
+            }
+        } catch {
+            activeErrorMessage = "Open Scanner could not import a file from the Scan Man imports."
+        }
+    }
+
+    private func importGroupedImageItems(_ items: [PendingImportItem], source: PendingImportItem.Source) async {
+        guard !items.isEmpty else { return }
+
+        do {
+            var images: [UIImage] = []
+            for item in items {
+                let data = try Data(contentsOf: item.url)
+                if let image = UIImage(data: data) {
+                    images.append(image)
+                }
+            }
+
+            guard !images.isEmpty else { return }
+
+            let createdAt = Date()
+            let scan = try scanImporter.makeScanDocument(from: images, createdAt: createdAt)
+            
+            try await repository.save(scan: scan)
+            scans.insert(scan, at: 0)
+            
+            for item in items {
+                try? importInbox.removeImportedItem(item)
+            }
+
+            Task {
+                await processOCR(for: scan)
+            }
+        } catch {
+            activeErrorMessage = "Open Scanner could not import grouped images from the Scan Man imports."
         }
     }
 }

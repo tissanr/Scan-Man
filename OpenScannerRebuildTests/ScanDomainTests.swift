@@ -38,7 +38,7 @@ struct ScanDomainTests {
             titleSuggester: TitleSuggestionService(),
             ocrProcessor: StubOCRProcessor(result: ScanOCRProcessingResult(scan: TestData.scan(title: "Imported", pages: []), failedPageCount: 0)),
             scanDeviceSupport: StubDeviceSupport(canScanDocuments: true),
-            scanImporter: StubScanImporter(result: .success(TestData.scan(title: "Imported", pages: []))),
+            scanImporter: StubScanImporter(),
             importInbox: StubImportInbox()
         )
 
@@ -60,7 +60,7 @@ struct ScanDomainTests {
             titleSuggester: TitleSuggestionService(),
             ocrProcessor: StubOCRProcessor(result: ScanOCRProcessingResult(scan: TestData.scan(title: "Imported", pages: []), failedPageCount: 0)),
             scanDeviceSupport: StubDeviceSupport(canScanDocuments: true),
-            scanImporter: StubScanImporter(result: .success(TestData.scan(title: "Imported", pages: []))),
+            scanImporter: StubScanImporter(),
             importInbox: StubImportInbox()
         )
 

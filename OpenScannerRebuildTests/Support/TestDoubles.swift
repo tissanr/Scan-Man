@@ -4,8 +4,9 @@ import UIKit
 
 final class StubScanRepository: ScanRepository {
     private(set) var storedScans: [ScanDocument]
+    private(set) var saveCalls: [ScanDocument] = []
 
-    init(scans: [ScanDocument]) {
+    init(scans: [ScanDocument] = []) {
         self.storedScans = scans
     }
 
@@ -18,6 +19,12 @@ final class StubScanRepository: ScanRepository {
     }
 
     func save(scan: ScanDocument) async throws {
+        saveCalls.append(scan)
+        if let index = storedScans.firstIndex(where: { $0.id == scan.id }) {
+            storedScans[index] = scan
+        } else {
+            storedScans.append(scan)
+        }
     }
 
     func updateTitle(scanID: UUID, title: String) async throws {
@@ -52,26 +59,33 @@ struct StubDeviceSupport: ScanDeviceSupporting {
     var unavailableMessage: String { "Unavailable" }
 }
 
-struct StubScanImporter: ScanImporting {
-    var result: Result<ScanDocument, Error>
-
+final class StubScanImporter: ScanImporting {
+    var imagesInput: [[UIImage]] = []
+    var pdfInput: [Data] = []
+    
     func makeScanDocument(from images: [UIImage], createdAt: Date) throws -> ScanDocument {
-        try result.get()
+        imagesInput.append(images)
+        let pages = images.enumerated().map { index, _ in
+            TestData.page(order: index, text: "Imported Page \(index + 1)")
+        }
+        return TestData.scan(title: "Imported \(images.count) Images", pages: pages)
     }
 
     func makeScanDocument(fromPDFData pdfData: Data, createdAt: Date) throws -> ScanDocument {
-        try result.get()
+        pdfInput.append(pdfData)
+        return TestData.scan(title: "Imported PDF", pages: [TestData.page(order: 0, text: "Imported PDF Content")])
     }
 }
 
 struct StubImportInbox: ImportInboxManaging {
     var importFolderDisplayPath: String { "Files > On My iPhone > Scan Man > Scan Man Imports" }
+    var mockPendingImports: [PendingImportItem] = []
 
     func prepareImportLocations() throws {
     }
 
     func pendingImports() throws -> [PendingImportItem] {
-        []
+        mockPendingImports
     }
 
     func removeImportedItem(_ item: PendingImportItem) throws {
