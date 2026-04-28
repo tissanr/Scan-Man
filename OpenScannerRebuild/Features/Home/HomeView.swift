@@ -89,6 +89,7 @@ struct HomeView<Detail: View>: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.isImporting)
                 .accessibilityLabel(viewModel.scanButtonAccessibilityLabel)
+                .accessibilityIdentifier("AddScan")
 
                 if let scanSupportMessage = viewModel.scanSupportMessage {
                     Text(scanSupportMessage)
