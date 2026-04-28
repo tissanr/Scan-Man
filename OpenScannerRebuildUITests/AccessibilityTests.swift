@@ -13,7 +13,11 @@ final class AccessibilityTests: XCTestCase {
         
         try app.performAccessibilityAudit { issue in
             // Skip noisy contrast and element detection issues in simulator
-            return issue.auditType != .contrast && issue.auditType != .elementDetection
+            // Skip simulator-unreliable visual checks; keep structural audits
+            return issue.auditType == .contrast
+                || issue.auditType == .elementDetection
+                || issue.auditType == .textClipped
+                || issue.auditType == .dynamicType
         }
     }
 
@@ -27,7 +31,11 @@ final class AccessibilityTests: XCTestCase {
         app.staticTexts["Seeded Invoice"].tap()
         
         try app.performAccessibilityAudit { issue in
-            return issue.auditType != .contrast && issue.auditType != .elementDetection
+            // Skip simulator-unreliable visual checks; keep structural audits
+            return issue.auditType == .contrast
+                || issue.auditType == .elementDetection
+                || issue.auditType == .textClipped
+                || issue.auditType == .dynamicType
         }
     }
 
@@ -45,7 +53,11 @@ final class AccessibilityTests: XCTestCase {
         openBtn.tap()
         
         try app.performAccessibilityAudit { issue in
-            return issue.auditType != .contrast && issue.auditType != .elementDetection
+            // Skip simulator-unreliable visual checks; keep structural audits
+            return issue.auditType == .contrast
+                || issue.auditType == .elementDetection
+                || issue.auditType == .textClipped
+                || issue.auditType == .dynamicType
         }
     }
 }

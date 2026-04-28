@@ -9,8 +9,11 @@
 - Delivered: Phase 7
 - Delivered: Phase 8
 - Delivered: Phase 9
-- Next: Phase 5
+- Delivered: Phase 5
 - Planned: Phase 6
+- Planned: Phase 10
+- Planned: Phase 11
+- Planned: Phase 12
 
 ## Phase 1
 
@@ -39,11 +42,19 @@
 - Allow lightweight editing of extracted page text where practical.
 - Explore richer in-app OCR presentation using stored geometry.
 - Status: delivered
+
 ## Phase 5: Optional Sync and Extended Inputs
 
 - Refactor import logic to group multiple shared/dropped images into a single multi-page scan.
 - Update Share Extension with robust activation rules for images and PDFs.
 - Enhance PDF import to reliably render all pages into a searchable scan document.
+- Keep Apple standard export options as the baseline export story.
+- Evaluate export destinations by implementation complexity:
+  - Lowest complexity: share sheet and Files-based export to any installed provider the system already exposes.
+  - Medium complexity: saved export destinations or repeat-export workflows built on Apple document APIs.
+  - Higher complexity: direct Nextcloud upload over WebDAV with account and error handling.
+  - Highest complexity: Syncthing-specific export or sync flows, which likely need a companion process or a filesystem handoff design.
+- Decide which export paths belong in v1 versus post-v1.
 - Status: delivered (Advanced cloud features moved to Phases 10-12)
 
 ## Phase 6: Rollout Preparation

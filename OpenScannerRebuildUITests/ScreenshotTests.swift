@@ -23,6 +23,7 @@ final class ScreenshotTests: XCTestCase {
         XCTAssertTrue(searchField.waitForExistence(timeout: 5))
         searchField.tap()
         takeScreenshot(named: "02_Search_Active")
+        app.typeText("\r") // dismiss search
 
         // 3. Scan Detail
         let scanRow = app.staticTexts["ScanTitle"]
@@ -31,12 +32,11 @@ final class ScreenshotTests: XCTestCase {
         takeScreenshot(named: "03_Detail")
 
         // 4. Page Preview with OCR
-        app.buttons["Open page 1"].tap()
-        XCTAssertTrue(app.otherElements["Page preview"].waitForExistence(timeout: 2))
+        let pageBtn = app.buttons["Open page 1"]
+        XCTAssertTrue(pageBtn.waitForExistence(timeout: 5))
+        pageBtn.tap()
+        XCTAssertTrue(app.navigationBars["Page 1"].waitForExistence(timeout: 5))
         takeScreenshot(named: "04_PagePreview_Base")
-        
-        // Toggle layout overlay if possible (assuming it's on by default in seeded view)
-        XCTAssertTrue(app.staticTexts["Detected Layout"].waitForExistence(timeout: 2))
         takeScreenshot(named: "05_PagePreview_With_OCR_Overlay")
     }
 

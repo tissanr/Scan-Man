@@ -63,10 +63,10 @@ Build a native iOS document scanning app called Scan Man using Apple frameworks 
 - Phase 2: delivered
 - Phase 3: delivered
 - Phase 4: delivered
-- Phase 5: next
+- Phase 5: delivered
 - Phase 6: planned
 
-## Next Formal Phases
+## Remaining Formal Phases
 
 ### Phase 5: Optional Sync And Extended Inputs
 
@@ -88,6 +88,7 @@ Requirements:
 - Expose any app-managed import folder clearly if the product relies on one, including where it appears in Files and how items are consumed after import.
 - Support Apple share-menu intake for images and PDFs when it can feed the same local import/OCR pipeline safely.
 - Explore annotations or other lightweight editing that fits the current architecture.
+- Status: delivered
 
 Prompt:
 
