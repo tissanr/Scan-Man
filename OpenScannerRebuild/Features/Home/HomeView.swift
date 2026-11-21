@@ -36,6 +36,11 @@ struct HomeView<Detail: View>: View {
                     scanList
                 }
             }
+            // Attached inside the stack so the bar belongs to the library screen only,
+            // not to pushed detail screens.
+            .safeAreaInset(edge: .bottom) {
+                addBar
+            }
             .navigationTitle("Scans")
             // Keep search at the top; the bottom edge holds the Add Scan bar.
             .searchable(text: $viewModel.searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search scans")
@@ -52,9 +57,6 @@ struct HomeView<Detail: View>: View {
                     .accessibilityIdentifier("Settings")
                 }
             }
-        }
-        .safeAreaInset(edge: .bottom) {
-            addBar
         }
         .task {
             await viewModel.load()
