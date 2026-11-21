@@ -1,66 +1,42 @@
 import Foundation
+import OSLog
 
-struct ScanOCRProcessingResult {
-    let scan: ScanDocument
-    let failedPageCount: Int
+nonisolated struct ScanOCRProcessingResult: Equatable, Sendable {
+    let pageResults: [PageOCRResult]
+    let failedPageIDs: [UUID]
+    let suggestedTitle: String?
+
+    var failedPageCount: Int { failedPageIDs.count }
 }
 
-protocol ScanOCRProcessing {
-    func process(scan: ScanDocument) async -> ScanOCRProcessingResult
+/// Runs OCR over a set of pages.
+nonisolated protocol ScanOCRProcessing: Sendable {
+    func process(pages: [ScanPage], suggestTitle: Bool) async -> ScanOCRProcessingResult
 }
 
-struct ScanOCRProcessor: ScanOCRProcessing {
+nonisolated struct ScanOCRProcessor: ScanOCRProcessing {
     let recognizer: OCRRecognizing
     let titleSuggester: TitleSuggesting
 
-    func process(scan: ScanDocument) async -> ScanOCRProcessingResult {
-        let pageResults = await withTaskGroup(of: OCRPageResult.self) { group in
-            for page in scan.pages {
-                group.addTask {
-                    do {
-                        let content = try await recognizer.recognizePage(in: page.imageData)
-                        return OCRPageResult(order: page.order, content: content, didFail: false)
-                    } catch {
-                        return OCRPageResult(order: page.order, content: nil, didFail: true)
-                    }
-                }
+    /// Pages are processed one at a time: Vision already uses several cores per page, and running
+    /// many pages at once mostly multiplies peak memory for long documents.
+    func process(pages: [ScanPage], suggestTitle: Bool) async -> ScanOCRProcessingResult {
+        var results: [PageOCRResult] = []
+        var failed: [UUID] = []
+
+        for page in pages.sorted(by: { $0.order < $1.order }) {
+            if Task.isCancelled { break }
+            do {
+                // OCR the unfiltered original; filters can remove faint text.
+                let content = try await recognizer.recognizePage(in: page.imageData)
+                results.append(PageOCRResult(pageID: page.id, text: content.text, observations: content.observations))
+            } catch {
+                Logger.ocr.error("OCR failed for a page: \(error.localizedDescription, privacy: .public)")
+                failed.append(page.id)
             }
-
-            var results: [OCRPageResult] = []
-            for await result in group {
-                results.append(result)
-            }
-            return results
-        }
-        let failedPageCount = pageResults.filter(\.didFail).count
-        let processedPages = scan.pages.map { page in
-            var updated = page
-            let result = pageResults.first(where: { $0.order == page.order })
-            updated.recognizedText = result?.content?.text ?? ""
-            updated.textObservations = result?.content?.observations ?? []
-            return updated
         }
 
-        var updatedScan = scan
-        updatedScan.pages = processedPages.sorted(by: { $0.order < $1.order })
-
-        let suggestedTitle = titleSuggester.suggestTitle(for: updatedScan.pages)
-        if shouldReplaceTitle(updatedScan.title) && suggestedTitle != "Untitled Scan" {
-            updatedScan.title = suggestedTitle
-        }
-        updatedScan.updatedAt = Date()
-
-        return ScanOCRProcessingResult(scan: updatedScan, failedPageCount: failedPageCount)
+        let title = suggestTitle ? titleSuggester.suggestTitle(for: results.map(\.text)) : nil
+        return ScanOCRProcessingResult(pageResults: results, failedPageIDs: failed, suggestedTitle: title)
     }
-
-    private func shouldReplaceTitle(_ title: String) -> Bool {
-        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty || trimmed == "Untitled Scan" || trimmed.hasPrefix("Scan ")
-    }
-}
-
-private struct OCRPageResult {
-    let order: Int
-    let content: OCRPageContent?
-    let didFail: Bool
 }

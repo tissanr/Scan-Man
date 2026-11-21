@@ -6,7 +6,7 @@ You are an expert iOS developer assisting with the maintenance and expansion of 
 
 - **Apple-Only Frameworks**: NEVER use third-party dependencies (Swift Packages, CocoaPods, etc.) for app logic.
 - **Local-First**: All data must be stored locally in Core Data. Cloud sync (if implemented) must be optional and non-blocking.
-- **Modern Swift**: Use Swift 6 concurrency features (`async/await`, `MainActor`, `Sendable`) and SwiftUI.
+- **Modern Swift**: Swift 6 language mode on Xcode 26 with default MainActor isolation. Services and models are explicitly `nonisolated`/`Sendable`; heavy work runs in `@concurrent` helpers. See `CLAUDE.md` for the full concurrency model and data flow.
 - **No Hacks**: Avoid window-level API hacks or deprecated UIKit wrappers where SwiftUI equivalents exist.
 
 ## Architecture

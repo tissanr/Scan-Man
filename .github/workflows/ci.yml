@@ -8,28 +8,60 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: macos-15
+    runs-on: macos-26
+    env:
+      COVERAGE_THRESHOLD: "75"
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
-    - name: Select Xcode
-      run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+    - name: Select Xcode 26
+      run: |
+        XCODE=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+        sudo xcode-select -s "$XCODE"
+        xcodebuild -version
+
+    - name: Pick simulator
+      run: |
+        DEST=$(scripts/ci-destination.sh)
+        echo "Using $DEST"
+        echo "DESTINATION=$DEST" >> "$GITHUB_ENV"
 
     - name: Build and Test
       run: |
+        set -o pipefail
         xcodebuild test \
           -project OpenScannerRebuild.xcodeproj \
           -scheme OpenScannerRebuild \
-          -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \
+          -destination "$DESTINATION" \
           -resultBundlePath TestResults.xcresult \
           -enableCodeCoverage YES \
           -parallel-testing-enabled NO \
-          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_ALLOWED=NO 2>&1 | tee xcodebuild.log
+
+    - name: Summarize errors and warnings
+      if: always()
+      run: |
+        grep -E "(error|warning): " xcodebuild.log | grep -v appintentsmetadataprocessor | sort -u | head -200 || true
+        grep -E "✘|failed \(|Test Case .* failed|recorded an issue" xcodebuild.log | head -100 || true
+
+    - name: Code coverage
+      if: success()
+      run: python3 scripts/check-coverage.py TestResults.xcresult "$COVERAGE_THRESHOLD"
 
     - name: Upload Test Results
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: test-results
-        path: TestResults.xcresult
+        path: |
+          TestResults.xcresult
+          xcodebuild.log
+
+    - name: Upload snapshots
+      if: always()
+      uses: actions/upload-artifact@v5
+      with:
+        name: snapshots
+        path: OpenScannerRebuildTests/__Snapshots__
+        if-no-files-found: ignore

@@ -1,20 +1,36 @@
 import Foundation
 import UIKit
 
+/// Handles UI-testing launch arguments: resetting or seeding the library and skipping first-run UI.
 enum AppSeeder {
-    static func seedIfNeeded(using repository: ScanRepository) async {
-        let arguments = ProcessInfo.processInfo.arguments
+    static let emptyArgument = "--ui-testing-empty"
+    static let seedArgument = "--ui-testing-seed-scan"
+    /// Shows onboarding even though other UI-testing arguments skip it.
+    static let onboardingArgument = "--ui-testing-onboarding"
 
-        if arguments.contains("--ui-testing-empty") {
+    static var arguments: [String] { ProcessInfo.processInfo.arguments }
+
+    static var isUITesting: Bool {
+        arguments.contains { $0.hasPrefix("--ui-testing") }
+    }
+
+    static func applyLaunchArguments(to settings: AppSettings) {
+        guard isUITesting else { return }
+        settings.appLockEnabled = false
+        settings.hasCompletedOnboarding = !arguments.contains(onboardingArgument)
+    }
+
+    static func seedIfNeeded(using repository: ScanRepository) async {
+        if arguments.contains(emptyArgument) {
             try? await repository.deleteAll()
             return
         }
 
-        guard arguments.contains("--ui-testing-seed-scan") else {
+        guard arguments.contains(seedArgument) else {
             return
         }
 
-        let existing = (try? await repository.fetchScans()) ?? []
+        let existing = (try? await repository.fetchSummaries()) ?? []
         guard existing.isEmpty else {
             return
         }
@@ -23,16 +39,16 @@ enum AppSeeder {
             id: UUID(),
             order: 0,
             createdAt: Date(),
-            imageData: Self.seedImageData(),
-            thumbnailData: Self.seedImageData(size: CGSize(width: 120, height: 160)),
-            recognizedText: "Invoice 2048\nOpen Scanner seeded document",
+            imageData: seedImageData(),
+            thumbnailData: seedImageData(size: CGSize(width: 120, height: 160)),
+            recognizedText: "Invoice 2048\nScan Man seeded document",
             textObservations: [
                 OCRTextObservation(
                     text: "Invoice 2048",
                     boundingBox: OCRBoundingBox(x: 0.08, y: 0.72, width: 0.32, height: 0.05)
                 ),
                 OCRTextObservation(
-                    text: "Open Scanner seeded document",
+                    text: "Scan Man seeded document",
                     boundingBox: OCRBoundingBox(x: 0.08, y: 0.62, width: 0.54, height: 0.04)
                 )
             ]
@@ -56,16 +72,12 @@ enum AppSeeder {
             UIColor.white.setFill()
             context.fill(CGRect(origin: .zero, size: size))
 
-            let paragraph = NSMutableParagraphStyle()
-            paragraph.alignment = .left
-
             let attributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: max(18, size.width * 0.04), weight: .semibold),
-                .foregroundColor: UIColor.black,
-                .paragraphStyle: paragraph
+                .foregroundColor: UIColor.black
             ]
 
-            NSString(string: "Open Scanner\nSeeded Sample").draw(
+            NSString(string: "Scan Man\nSeeded Sample").draw(
                 in: CGRect(x: 40, y: 60, width: size.width - 80, height: 200),
                 withAttributes: attributes
             )

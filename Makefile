@@ -2,7 +2,7 @@
 
 PROJECT = OpenScannerRebuild.xcodeproj
 SCHEME = OpenScannerRebuild
-SIMULATOR = platform=iOS Simulator,name=iPhone 16,OS=18.5
+SIMULATOR = $(shell scripts/ci-destination.sh)
 
 help:
 	@echo "Available commands:"
@@ -17,7 +17,9 @@ build:
 	xcodebuild build -project $(PROJECT) -scheme $(SCHEME) -destination '$(SIMULATOR)' CODE_SIGNING_ALLOWED=NO
 
 test:
-	xcodebuild test -project $(PROJECT) -scheme $(SCHEME) -destination '$(SIMULATOR)' CODE_SIGNING_ALLOWED=NO -enableCodeCoverage YES -parallel-testing-enabled NO
+	rm -rf build/TestResults.xcresult
+	xcodebuild test -project $(PROJECT) -scheme $(SCHEME) -destination '$(SIMULATOR)' CODE_SIGNING_ALLOWED=NO -enableCodeCoverage YES -parallel-testing-enabled NO -resultBundlePath build/TestResults.xcresult
+	python3 scripts/check-coverage.py build/TestResults.xcresult 75
 
 clean:
 	xcodebuild clean -project $(PROJECT) -scheme $(SCHEME)
@@ -27,7 +29,7 @@ doc:
 
 screenshot:
 	@echo "Running UI tests to capture screenshots..."
-	xcodebuild test -project $(PROJECT) -scheme $(SCHEME) -destination '$(SIMULATOR)' -only-testing:OpenScannerRebuildUITests CODE_SIGNING_ALLOWED=NO
+	xcodebuild test -project $(PROJECT) -scheme $(SCHEME) -destination '$(SIMULATOR)' -only-testing:OpenScannerRebuildUITests/ScreenshotTests CODE_SIGNING_ALLOWED=NO
 
 seed-data:
-	xcrun simctl launch booted com.scanner.OpenScannerRebuild --ui-testing-seed-scan
+	xcrun simctl launch booted me.tissanr.OpenScannerRebuild --ui-testing-seed-scan

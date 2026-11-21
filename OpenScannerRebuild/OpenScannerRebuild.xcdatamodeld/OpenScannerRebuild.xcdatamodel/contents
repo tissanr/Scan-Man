@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
-    <entity name="ScanEntity" representedClassName="ScanEntity" syncable="YES" codeGenerationType="class">
+    <entity name="ScanEntity" representedClassName="ScanEntity" syncable="YES">
         <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="notes" optional="NO" attributeType="String" defaultValueString=""/>
@@ -8,7 +8,7 @@
         <attribute name="updatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <relationship name="pages" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ScanPageEntity" inverseName="scan" inverseEntity="ScanPageEntity"/>
     </entity>
-    <entity name="ScanPageEntity" representedClassName="ScanPageEntity" syncable="YES" codeGenerationType="class">
+    <entity name="ScanPageEntity" representedClassName="ScanPageEntity" syncable="YES">
         <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="imageData" optional="NO" attributeType="Binary"/>

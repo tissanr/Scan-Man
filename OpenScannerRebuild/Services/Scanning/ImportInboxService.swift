@@ -1,15 +1,13 @@
 import Foundation
 import UniformTypeIdentifiers
 
-struct ImportInboxService: ImportInboxManaging {
-    private let fileManager: FileManager
-    private let appGroupIdentifier: String
+nonisolated struct ImportInboxService: ImportInboxManaging {
+    static let appGroupIdentifier = "group.me.tissanr.OpenScannerRebuild"
 
-    init(
-        fileManager: FileManager = .default,
-        appGroupIdentifier: String = "group.me.tissanr.OpenScannerRebuild"
-    ) {
-        self.fileManager = fileManager
+    private let appGroupIdentifier: String
+    private var fileManager: FileManager { .default }
+
+    init(appGroupIdentifier: String = ImportInboxService.appGroupIdentifier) {
         self.appGroupIdentifier = appGroupIdentifier
     }
 

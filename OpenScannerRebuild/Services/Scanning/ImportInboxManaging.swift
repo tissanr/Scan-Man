@@ -1,13 +1,14 @@
 import Foundation
 
-protocol ImportInboxManaging {
+/// Folders that feed files into the library: the Files-visible import folder and the share-extension inbox.
+nonisolated protocol ImportInboxManaging: Sendable {
     var importFolderDisplayPath: String { get }
     func prepareImportLocations() throws
     func pendingImports() throws -> [PendingImportItem]
     func removeImportedItem(_ item: PendingImportItem) throws
 }
 
-struct PendingImportItem: Equatable, Sendable {
+nonisolated struct PendingImportItem: Equatable, Sendable {
     enum Kind: Sendable {
         case image
         case pdf

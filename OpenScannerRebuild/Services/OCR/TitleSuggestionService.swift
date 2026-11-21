@@ -1,22 +1,25 @@
 import Foundation
 
-protocol TitleSuggesting {
-    func suggestTitle(for pages: [ScanPage]) -> String
+nonisolated protocol TitleSuggesting: Sendable {
+    /// A short title from the first meaningful line of text, or nil if there is none.
+    func suggestTitle(for pageTexts: [String]) -> String?
 }
 
-struct TitleSuggestionService: TitleSuggesting {
-    func suggestTitle(for pages: [ScanPage]) -> String {
-        for page in pages.sorted(by: { $0.order < $1.order }) {
-            let candidate = page.recognizedText
+nonisolated struct TitleSuggestionService: TitleSuggesting {
+    func suggestTitle(for pageTexts: [String]) -> String? {
+        for text in pageTexts {
+            let candidate = text
                 .components(separatedBy: .newlines)
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .first { $0.count >= 3 }
+                .first { line in
+                    // Skip lines that are mostly numbers or punctuation (dates, page numbers, totals).
+                    line.unicodeScalars.filter { CharacterSet.letters.contains($0) }.count >= 3
+                }
 
-            if let candidate, !candidate.isEmpty {
+            if let candidate {
                 return String(candidate.prefix(60))
             }
         }
-
-        return "Untitled Scan"
+        return nil
     }
 }

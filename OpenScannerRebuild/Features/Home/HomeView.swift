@@ -1,17 +1,23 @@
 import PhotosUI
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
 struct HomeView<Detail: View>: View {
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var viewModel: HomeViewModel
-    @State private var navigationPath: [ScanDocument] = []
+    @Environment(\.openURL) private var openURL
+    @Environment(LibraryEvents.self) private var events
+    @Environment(OCRCoordinator.self) private var ocrCoordinator
+
+    @State private var viewModel: HomeViewModel
+    @State private var navigationPath: [UUID] = []
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var isShowingPDFImporter = false
-    let detailFactory: (ScanDocument) -> Detail
+    @State private var isShowingSettings = false
+    let detailFactory: (UUID) -> Detail
 
-    init(viewModel: HomeViewModel, detailFactory: @escaping (ScanDocument) -> Detail) {
-        _viewModel = StateObject(wrappedValue: viewModel)
+    init(viewModel: HomeViewModel, detailFactory: @escaping (UUID) -> Detail) {
+        _viewModel = State(initialValue: viewModel)
         self.detailFactory = detailFactory
     }
 
@@ -19,139 +25,65 @@ struct HomeView<Detail: View>: View {
         NavigationStack(path: $navigationPath) {
             Group {
                 if viewModel.filteredScans.isEmpty, viewModel.searchText.isEmpty {
-                    EmptyLibraryView(
-                        title: "No Scans Yet",
-                        message: "Scan paper documents and keep everything stored locally on this device.",
-                        systemImage: "doc.viewfinder"
-                    )
-                } else if viewModel.filteredScans.isEmpty {
-                    EmptyLibraryView(
-                        title: "No Results",
-                        message: "Try a different search term.",
-                        systemImage: "magnifyingglass"
-                    )
-                } else {
-                    List {
-                        ForEach(viewModel.filteredScans) { scan in
-                            NavigationLink(value: scan) {
-                                ScanListRow(scan: scan)
-                            }
-                            .accessibilityLabel("Open \(scan.title)")
-                            .swipeActions {
-                                Button(role: .destructive) {
-                                    Task {
-                                        await viewModel.delete(scan)
-                                    }
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
-                        }
+                    ContentUnavailableView {
+                        Label("No Scans Yet", systemImage: "doc.viewfinder")
+                    } description: {
+                        Text("Scan paper documents or import photos and PDFs. Everything stays on this device.")
                     }
-                    .listStyle(.plain)
+                } else if viewModel.filteredScans.isEmpty {
+                    ContentUnavailableView.search(text: viewModel.searchText)
+                } else {
+                    scanList
                 }
+            }
+            // Attached inside the stack so the bar belongs to the library screen only,
+            // not to pushed detail screens.
+            .safeAreaInset(edge: .bottom) {
+                addBar
             }
             .navigationTitle("Scans")
-            .searchable(text: Binding(
-                get: { viewModel.searchText },
-                set: { viewModel.searchText = $0 }
-            ), prompt: "Search scans")
-            .navigationDestination(for: ScanDocument.self) { scan in
-                detailFactory(scan)
+            // Keep search at the top; the bottom edge holds the Add Scan bar.
+            .searchable(text: $viewModel.searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search scans")
+            .navigationDestination(for: UUID.self) { scanID in
+                detailFactory(scanID)
             }
-        }
-        .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 8) {
-                Menu {
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        viewModel.beginScan()
+                        isShowingSettings = true
                     } label: {
-                        Label("Scan Document", systemImage: "plus.viewfinder")
+                        Label("Settings", systemImage: "gearshape")
                     }
-
-                    PhotosPicker(
-                        selection: $selectedPhotoItems,
-                        maxSelectionCount: 24,
-                        matching: .images
-                    ) {
-                        Label("Import Photos", systemImage: "photo.on.rectangle")
-                    }
-
-                    Button {
-                        isShowingPDFImporter = true
-                    } label: {
-                        Label("Import PDF", systemImage: "doc.richtext")
-                    }
-                } label: {
-                    Label(viewModel.isImporting ? "Working..." : "Add Scan", systemImage: "plus.viewfinder")
-                        .frame(maxWidth: .infinity)
+                    .accessibilityIdentifier("Settings")
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(viewModel.isImporting)
-                .accessibilityLabel(viewModel.scanButtonAccessibilityLabel)
-                .accessibilityIdentifier("AddScan")
-
-                if let scanSupportMessage = viewModel.scanSupportMessage {
-                    Text(scanSupportMessage)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .accessibilityLabel("Scanning availability")
-                }
-
-                Text("Import folder: \(viewModel.importFolderDisplayPath)")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .accessibilityLabel("Import folder path")
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 12)
-            .background(.bar)
         }
         .task {
             await viewModel.load()
         }
+        .onChange(of: events.revision) {
+            Task { await viewModel.reload() }
+        }
         .onChange(of: scenePhase) {
-            guard scenePhase == .active else {
-                return
-            }
-
-            Task {
-                await viewModel.refreshImportSources()
-            }
+            guard scenePhase == .active else { return }
+            Task { await viewModel.refreshImportSources() }
         }
-        .onChange(of: viewModel.pendingNavigationScan) {
-            let scan = viewModel.pendingNavigationScan
-            guard let scan else {
-                return
-            }
-
-            navigationPath.append(scan)
-            _ = viewModel.consumePendingNavigation()
+        .onChange(of: viewModel.pendingNavigationScanID) {
+            guard let scanID = viewModel.consumePendingNavigation() else { return }
+            navigationPath.append(scanID)
         }
-        .sheet(isPresented: Binding(
+        .fullScreenCover(isPresented: Binding(
             get: { viewModel.isShowingScanner },
-            set: { isPresented in
-                if !isPresented {
-                    viewModel.handleScanCancel()
-                }
-            }
+            set: { if !$0 { viewModel.handleScanCancel() } }
         )) {
             DocumentScannerView(
                 onFinish: { images in
-                    Task {
-                        await viewModel.handleScan(images: images)
-                    }
+                    Task { await viewModel.handleScan(images: images) }
                 },
-                onCancel: {
-                    viewModel.handleScanCancel()
-                },
-                onFailure: { error in
-                    viewModel.handleScanFailure(error)
-                }
+                onCancel: { viewModel.handleScanCancel() },
+                onFailure: { error in viewModel.handleScanFailure(error) }
             )
+            .ignoresSafeArea()
         }
         .fileImporter(
             isPresented: $isShowingPDFImporter,
@@ -160,39 +92,36 @@ struct HomeView<Detail: View>: View {
         ) { result in
             switch result {
             case .success(let urls):
-                guard let url = urls.first else {
-                    return
-                }
-
-                Task {
-                    await importPDF(at: url)
-                }
+                guard let url = urls.first else { return }
+                Task { await importPDF(at: url) }
             case .failure(let error):
                 viewModel.handleScanFailure(error)
             }
         }
         .onChange(of: selectedPhotoItems) {
             let items = selectedPhotoItems
-            guard !items.isEmpty else {
-                return
-            }
-
-            Task {
-                await importPhotos(from: items)
-                selectedPhotoItems = []
-            }
+            guard !items.isEmpty else { return }
+            selectedPhotoItems = []
+            Task { await viewModel.importPhotos(from: await PhotoLoader.loadData(from: items)) }
+        }
+        .sheet(isPresented: $isShowingSettings) {
+            SettingsView()
         }
         .alert(
-            "Open Scanner",
+            "Scan Man",
             isPresented: Binding(
                 get: { viewModel.activeErrorMessage != nil },
-                set: { isPresented in
-                    if !isPresented {
+                set: { if !$0 { viewModel.dismissError() } }
+            ),
+            actions: {
+                if viewModel.errorOffersSettingsLink {
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            openURL(url)
+                        }
                         viewModel.dismissError()
                     }
                 }
-            ),
-            actions: {
                 Button("OK", role: .cancel) {
                     viewModel.dismissError()
                 }
@@ -203,32 +132,76 @@ struct HomeView<Detail: View>: View {
         )
     }
 
-    private func importPhotos(from items: [PhotosPickerItem]) async {
-        let loadedData = await withTaskGroup(of: Data?.self) { group in
-            for item in items {
-                group.addTask {
-                    try? await item.loadTransferable(type: Data.self)
+    private var scanList: some View {
+        List {
+            ForEach(viewModel.filteredScans) { scan in
+                NavigationLink(value: scan.id) {
+                    ScanListRow(scan: scan, isRecognizingText: ocrCoordinator.isRecognizing(scanID: scan.id))
+                }
+                .accessibilityLabel("Open \(scan.title)")
+                .swipeActions {
+                    Button(role: .destructive) {
+                        Task { await viewModel.delete(scan) }
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
                 }
             }
-
-            var results: [Data] = []
-            for await data in group {
-                if let data {
-                    results.append(data)
-                }
-            }
-            return results
         }
+        .listStyle(.plain)
+    }
 
-        await viewModel.importPhotos(from: loadedData)
+    private var addBar: some View {
+        VStack(spacing: 8) {
+            Menu {
+                Button {
+                    viewModel.beginScan()
+                } label: {
+                    Label("Scan Document", systemImage: "doc.viewfinder")
+                }
+
+                PhotosPicker(
+                    selection: $selectedPhotoItems,
+                    maxSelectionCount: 50,
+                    selectionBehavior: .ordered,
+                    matching: .images
+                ) {
+                    Label("Import Photos", systemImage: "photo.on.rectangle")
+                }
+
+                Button {
+                    isShowingPDFImporter = true
+                } label: {
+                    Label("Import PDF", systemImage: "doc.richtext")
+                }
+            } label: {
+                Label(viewModel.isImporting ? "Working…" : "Add Scan", systemImage: "plus.viewfinder")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(viewModel.isImporting)
+            .accessibilityLabel(viewModel.scanButtonAccessibilityLabel)
+            .accessibilityIdentifier("AddScan")
+
+            if let scanSupportMessage = viewModel.scanSupportMessage {
+                Text(scanSupportMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .accessibilityLabel("Scanning availability")
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
+        .background(.bar)
     }
 
     private func importPDF(at url: URL) async {
         let didAccess = url.startAccessingSecurityScopedResource()
         defer {
-            if didAccess {
-                url.stopAccessingSecurityScopedResource()
-            }
+            if didAccess { url.stopAccessingSecurityScopedResource() }
         }
 
         do {
@@ -240,26 +213,15 @@ struct HomeView<Detail: View>: View {
     }
 }
 
-private struct EmptyLibraryView: View {
-    let title: String
-    let message: String
-    let systemImage: String
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: systemImage)
-                .font(.system(size: 42))
-                .foregroundStyle(.secondary)
-
-            Text(title)
-                .font(.title3.weight(.semibold))
-
-            Text(message)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+/// Loads picked photos in selection order.
+enum PhotoLoader {
+    static func loadData(from items: [PhotosPickerItem]) async -> [Data] {
+        var results: [Data] = []
+        for item in items {
+            if let data = try? await item.loadTransferable(type: Data.self) {
+                results.append(data)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(24)
+        return results
     }
 }
