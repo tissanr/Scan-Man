@@ -77,9 +77,14 @@ final class StubScanImporter: ScanImporting {
     }
 }
 
-struct StubImportInbox: ImportInboxManaging {
+final class StubImportInbox: ImportInboxManaging {
     var importFolderDisplayPath: String { "Files > On My iPhone > Scan Man > Scan Man Imports" }
-    var mockPendingImports: [PendingImportItem] = []
+    var mockPendingImports: [PendingImportItem]
+    private(set) var removedItems: [PendingImportItem] = []
+
+    init(mockPendingImports: [PendingImportItem] = []) {
+        self.mockPendingImports = mockPendingImports
+    }
 
     func prepareImportLocations() throws {
     }
@@ -89,6 +94,8 @@ struct StubImportInbox: ImportInboxManaging {
     }
 
     func removeImportedItem(_ item: PendingImportItem) throws {
+        removedItems.append(item)
+        mockPendingImports.removeAll { $0 == item }
     }
 }
 
@@ -106,9 +113,10 @@ struct StubOCRRecognizer: OCRRecognizing {
 }
 
 struct StubOCRProcessor: ScanOCRProcessing {
-    let result: ScanOCRProcessingResult
+    /// Fixed result to return; when nil, the input scan is echoed back unchanged.
+    var result: ScanOCRProcessingResult?
 
     func process(scan: ScanDocument) async -> ScanOCRProcessingResult {
-        result
+        result ?? ScanOCRProcessingResult(scan: scan, failedPageCount: 0)
     }
 }

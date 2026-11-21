@@ -140,12 +140,15 @@ final class HomeViewModel: ObservableObject {
     private func processOCR(for scan: ScanDocument) async {
         let result = await ocrProcessor.process(scan: scan)
 
+        // The scan may have been deleted while OCR was running; saving would bring it back.
+        guard scans.contains(where: { $0.id == result.scan.id }) else {
+            return
+        }
+
         do {
             try await repository.save(scan: result.scan)
             if let index = scans.firstIndex(where: { $0.id == result.scan.id }) {
                 scans[index] = result.scan
-            } else {
-                await load()
             }
 
             if result.failedPageCount == result.scan.pages.count, !result.scan.pages.isEmpty {
@@ -243,10 +246,12 @@ final class HomeViewModel: ObservableObject {
 
         do {
             var images: [UIImage] = []
+            var importedItems: [PendingImportItem] = []
             for item in items {
                 let data = try Data(contentsOf: item.url)
                 if let image = UIImage(data: data) {
                     images.append(image)
+                    importedItems.append(item)
                 }
             }
 
@@ -258,7 +263,8 @@ final class HomeViewModel: ObservableObject {
             try await repository.save(scan: scan)
             scans.insert(scan, at: 0)
             
-            for item in items {
+            // Only consume files that made it into the scan; leave unreadable ones in the inbox.
+            for item in importedItems {
                 try? importInbox.removeImportedItem(item)
             }
 
