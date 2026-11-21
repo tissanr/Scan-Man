@@ -9,8 +9,9 @@ import XCTest
 
 final class OpenScannerRebuildUITestsLaunchTests: XCTestCase {
 
+    // Running in every orientation/appearance leaves the simulator rotated for later tests.
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
-        true
+        false
     }
 
     override func setUpWithError() throws {
@@ -19,8 +20,7 @@ final class OpenScannerRebuildUITestsLaunchTests: XCTestCase {
 
     @MainActor
     func testLaunch() throws {
-        let app = XCUIApplication()
-        app.launch()
+        let app = XCUIApplication.launched("--ui-testing-empty")
 
         // Insert steps here to perform after app launch but before taking a screenshot,
         // such as logging into a test account or navigating somewhere in the app

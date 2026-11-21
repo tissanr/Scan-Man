@@ -37,7 +37,8 @@ struct HomeView<Detail: View>: View {
                 }
             }
             .navigationTitle("Scans")
-            .searchable(text: $viewModel.searchText, prompt: "Search scans")
+            // Keep search at the top; the bottom edge holds the Add Scan bar.
+            .searchable(text: $viewModel.searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search scans")
             .navigationDestination(for: UUID.self) { scanID in
                 detailFactory(scanID)
             }

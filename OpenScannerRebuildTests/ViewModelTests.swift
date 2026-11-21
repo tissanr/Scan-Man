@@ -153,7 +153,8 @@ struct ScanDetailViewModelTests {
 
         await viewModel.rotatePage(page.id, clockwise: true)
 
-        #expect(TestData.pixelSize(of: try #require(viewModel.page(for: page.id)?.imageData)) == CGSize(width: 900, height: 600))
+        let rotatedImage = try #require(viewModel.page(for: page.id)?.imageData)
+        #expect(TestData.pixelSize(of: rotatedImage) == CGSize(width: 900, height: 600))
         #expect(await waitUntil { repository.ocrApplicationCount == 1 })
         await viewModel.load()
         #expect(viewModel.page(for: page.id)?.recognizedText == "Upright")

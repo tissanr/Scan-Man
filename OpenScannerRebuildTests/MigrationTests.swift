@@ -8,15 +8,15 @@ import Testing
 /// Verifies that a store written by the version 1 model opens with the current model without data loss.
 @MainActor
 struct MigrationTests {
-    private static var compiledModelDirectory: URL {
-        get throws {
-            try #require(Bundle(for: PersistenceController.self).url(forResource: PersistenceController.modelName, withExtension: "momd"))
-        }
-    }
+    private struct MissingModel: Error {}
 
     private func model(named name: String) throws -> NSManagedObjectModel {
-        let url = try Self.compiledModelDirectory.appendingPathComponent("\(name).mom")
-        return try #require(NSManagedObjectModel(contentsOf: url))
+        guard let directory = Bundle(for: PersistenceController.self)
+                .url(forResource: PersistenceController.modelName, withExtension: "momd"),
+              let model = NSManagedObjectModel(contentsOf: directory.appendingPathComponent("\(name).mom")) else {
+            throw MissingModel()
+        }
+        return model
     }
 
     @Test

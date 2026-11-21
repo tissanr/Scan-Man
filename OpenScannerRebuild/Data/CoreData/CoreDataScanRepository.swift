@@ -111,6 +111,8 @@ nonisolated struct CoreDataScanRepository: ScanRepository {
             guard pages.count > 1 else {
                 throw AppError.lastPageCannotBeDeleted
             }
+            // Detach first so the relationship (and the summary fields) no longer include the page.
+            page.scan = nil
             context.delete(page)
             for (index, remaining) in pages.filter({ $0 !== page }).enumerated() {
                 remaining.order = Int32(index)
@@ -201,6 +203,7 @@ nonisolated struct CoreDataScanRepository: ScanRepository {
                 throw AppError.notFound
             }
             try change(entity, context)
+            context.processPendingChanges()
             entity.updatedAt = Date()
             entity.refreshDerivedFields()
         }

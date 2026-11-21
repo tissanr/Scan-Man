@@ -39,7 +39,6 @@ final class OpenScannerRebuildUITests: XCTestCase {
         let app = XCUIApplication.launched("--ui-testing-seed-scan")
         XCTAssertTrue(app.staticTexts["ScanTitle"].waitForExistence(timeout: 10))
 
-        app.collectionViews.firstMatch.swipeDown() // reveal the search field
         let searchField = app.searchFields.firstMatch
         XCTAssertTrue(searchField.waitForExistence(timeout: 5))
         searchField.tap()
@@ -72,8 +71,7 @@ final class OpenScannerRebuildUITests: XCTestCase {
 
         let editor = app.textViews["Extracted text editor"]
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
-        app.scrollTo(editor)
-        editor.tap()
+        app.focus(editor)
         editor.typeText(" Edited OCR text")
 
         let save = app.buttons["Save extracted text"]
