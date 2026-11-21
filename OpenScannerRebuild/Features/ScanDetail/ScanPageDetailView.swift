@@ -1,47 +1,64 @@
 import SwiftUI
 
 struct ScanPageDetailView: View {
-    let saveRecognizedText: (String) async -> Bool
-    let reloadPage: () -> ScanPage?
+    let viewModel: ScanDetailViewModel
+    let pageID: UUID
 
-    @State private var currentPage: ScanPage
-    @State private var editedText: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var editedText = ""
+    @State private var loadedText: String?
     @State private var selectedObservationID: String?
     @State private var isSaving = false
-    @State private var activeErrorMessage: String?
+    @State private var cropRequest: CropRequest?
 
-    init(
-        page: ScanPage,
-        saveRecognizedText: @escaping (String) async -> Bool,
-        reloadPage: @escaping () -> ScanPage?
-    ) {
-        self.saveRecognizedText = saveRecognizedText
-        self.reloadPage = reloadPage
-        _currentPage = State(initialValue: page)
-        _editedText = State(initialValue: page.recognizedText)
+    private var page: ScanPage? {
+        viewModel.page(for: pageID)
+    }
+
+    private var position: Int {
+        (viewModel.pages.firstIndex { $0.id == pageID } ?? 0) + 1
     }
 
     var body: some View {
+        Group {
+            if let page {
+                content(for: page)
+            } else {
+                ContentUnavailableView("Page Deleted", systemImage: "doc", description: Text("This page is no longer part of the scan."))
+            }
+        }
+        .navigationTitle("Page \(position)")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear(perform: syncText)
+        .onChange(of: page?.recognizedText) { syncText() }
+        .sheet(item: $cropRequest) { request in
+            CropView(imageData: request.imageData, initialQuad: request.quad) { quad in
+                cropRequest = nil
+                Task { await viewModel.cropPage(pageID, to: quad) }
+            } onCancel: {
+                cropRequest = nil
+            }
+        }
+    }
+
+    private func content(for page: ScanPage) -> some View {
         List {
             Section("Preview") {
-                PagePreviewView(
-                    page: currentPage,
-                    selectedObservationID: selectedObservationID
-                )
-                .frame(minHeight: 320)
-                .listRowInsets(EdgeInsets())
-                .accessibilityLabel("Page preview")
+                PagePreviewView(page: page, selectedObservationID: selectedObservationID)
+                    .frame(minHeight: 320)
+                    .listRowInsets(EdgeInsets())
+                    .accessibilityLabel("Page preview")
             }
 
-            if currentPage.hasOCRLayout {
-                Section("Detected Layout") {
-                    Text("Stored OCR geometry is shown on the page preview and lines are ordered for reading.")
+            Section("Detected Layout") {
+                if page.hasOCRLayout {
+                    Text("Detected lines are highlighted on the page and listed in reading order.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
 
-                    ForEach(Array(currentPage.orderedTextObservations.enumerated()), id: \.offset) { index, observation in
+                    ForEach(Array(page.orderedTextObservations.enumerated()), id: \.offset) { index, observation in
                         Button {
-                            selectedObservationID = observation.id
+                            selectedObservationID = observation.layoutID
                         } label: {
                             HStack(alignment: .top, spacing: 12) {
                                 Text("\(index + 1)")
@@ -54,16 +71,17 @@ struct ScanPageDetailView: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .padding(10)
-                            .background(observation.id == selectedObservationID ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.08))
+                            .background(observation.layoutID == selectedObservationID ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.08))
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Highlight detected text \(index + 1)")
                     }
-                }
-            } else {
-                Section("Detected Layout") {
-                    Text("Layout highlights are unavailable for this page. You can still review and edit the extracted text below.")
+                } else if viewModel.isRecognizingText {
+                    Label("Reading text…", systemImage: "text.viewfinder")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("No layout is available for this page. You can still review and edit the text below.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -74,57 +92,111 @@ struct ScanPageDetailView: View {
                     .frame(minHeight: 180)
                     .accessibilityLabel("Extracted text editor")
 
-                Button(isSaving ? "Saving..." : "Save Text") {
-                    Task {
-                        await save()
-                    }
+                Button(isSaving ? "Saving…" : "Save Text") {
+                    Task { await save() }
                 }
-                .disabled(isSaving || editedText.normalizedOCRText == currentPage.recognizedText)
+                .disabled(isSaving || editedText.normalizedOCRText == page.recognizedText)
                 .accessibilityLabel("Save extracted text")
             }
         }
-        .navigationTitle("Page \(currentPage.order + 1)")
-        .navigationBarTitleDisplayMode(.inline)
-        .alert(
-            "Open Scanner",
-            isPresented: Binding(
-                get: { activeErrorMessage != nil },
-                set: { presented in
-                    if !presented {
-                        activeErrorMessage = nil
-                    }
-                }
-            ),
-            actions: {
-                Button("OK", role: .cancel) {
-                    activeErrorMessage = nil
-                }
-            },
-            message: {
-                Text(activeErrorMessage ?? "")
+        .overlay {
+            if viewModel.isWorking {
+                ProgressView()
+                    .padding(24)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
             }
-        )
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                pageActions(for: page)
+            }
+        }
     }
 
-    @MainActor
+    private func pageActions(for page: ScanPage) -> some View {
+        Menu {
+            Button {
+                Task { await viewModel.rotatePage(pageID, clockwise: false) }
+            } label: {
+                Label("Rotate Left", systemImage: "rotate.left")
+            }
+
+            Button {
+                Task { await viewModel.rotatePage(pageID, clockwise: true) }
+            } label: {
+                Label("Rotate Right", systemImage: "rotate.right")
+            }
+
+            Button {
+                Task {
+                    let detected = await viewModel.detectDocument(in: pageID)
+                    cropRequest = CropRequest(imageData: page.imageData, quad: detected ?? .fullImage)
+                }
+            } label: {
+                Label("Crop…", systemImage: "crop")
+            }
+
+            Picker(selection: Binding(
+                get: { page.enhancement },
+                set: { enhancement in Task { await viewModel.setEnhancement(enhancement, for: pageID) } }
+            )) {
+                ForEach(ImageEnhancement.allCases) { enhancement in
+                    Text(enhancement.displayName).tag(enhancement)
+                }
+            } label: {
+                Label("Filter", systemImage: "camera.filters")
+            }
+            .pickerStyle(.menu)
+
+            Divider()
+
+            Button(role: .destructive) {
+                Task {
+                    await viewModel.deletePage(pageID)
+                    if viewModel.page(for: pageID) == nil {
+                        dismiss()
+                    }
+                }
+            } label: {
+                Label("Delete Page", systemImage: "trash")
+            }
+            .disabled(!viewModel.canDeletePages)
+        } label: {
+            Label("Page Actions", systemImage: "ellipsis.circle")
+        }
+        .accessibilityIdentifier("PageActions")
+        .disabled(viewModel.isWorking)
+    }
+
+    /// Follows the stored text unless the user has unsaved edits.
+    private func syncText() {
+        guard let stored = page?.recognizedText else { return }
+        if loadedText == nil || editedText.normalizedOCRText == loadedText {
+            editedText = stored
+        }
+        loadedText = stored
+    }
+
     private func save() async {
         isSaving = true
-        let didSave = await saveRecognizedText(editedText)
+        let didSave = await viewModel.updateRecognizedText(for: pageID, text: editedText)
         isSaving = false
-
-        guard didSave else {
-            activeErrorMessage = "Open Scanner could not save the edited text."
-            return
+        if didSave, let stored = page?.recognizedText {
+            editedText = stored
+            loadedText = stored
         }
-
-        let refreshedPage = reloadPage() ?? currentPage
-        currentPage = refreshedPage
-        editedText = refreshedPage.recognizedText
     }
 }
 
-private extension OCRTextObservation {
-    var id: String {
+private struct CropRequest: Identifiable {
+    let id = UUID()
+    let imageData: Data
+    let quad: DocumentQuad
+}
+
+extension OCRTextObservation {
+    /// Stable identifier for highlighting a line in the preview.
+    var layoutID: String {
         "\(text)|\(boundingBox.x)|\(boundingBox.y)|\(boundingBox.width)|\(boundingBox.height)"
     }
 }

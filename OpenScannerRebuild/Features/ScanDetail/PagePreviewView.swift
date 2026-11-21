@@ -7,7 +7,7 @@ struct PagePreviewView: View {
 
     var body: some View {
         Group {
-            if let image = UIImage(data: page.imageData) {
+            if let image = UIImage(data: page.displayImageData) {
                 GeometryReader { geometry in
                     ZoomableScrollView {
                         ZStack {
@@ -16,6 +16,9 @@ struct PagePreviewView: View {
                                 .scaledToFit()
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .background(Color.black)
+                                .accessibilityLabel(page.recognizedText.isEmpty
+                                    ? "Scanned page"
+                                    : "Scanned page. \(page.previewText)")
 
                             OCRLayoutOverlay(
                                 page: page,
@@ -27,6 +30,7 @@ struct PagePreviewView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Color.black)
+                        .accessibilityElement(children: .combine)
                     }
                 }
                 .accessibilityIdentifier("Page preview")
@@ -34,7 +38,7 @@ struct PagePreviewView: View {
             } else {
                 ContentUnavailableStateView(
                     title: "Preview Unavailable",
-                    message: "Open Scanner could not load this page image.",
+                    message: "Scan Man could not load this page image.",
                     systemImage: "photo"
                 )
             }
@@ -45,7 +49,8 @@ struct PagePreviewView: View {
     }
 }
 
-private struct OCRLayoutOverlay: View {
+/// Highlights OCR line boxes over a page image. Internal so snapshot tests can render it.
+struct OCRLayoutOverlay: View {
     let page: ScanPage
     let imageSize: CGSize
     let containerSize: CGSize
@@ -58,10 +63,10 @@ private struct OCRLayoutOverlay: View {
             ForEach(Array(page.orderedTextObservations.enumerated()), id: \.offset) { _, observation in
                 let rect = observationRect(for: observation.boundingBox, in: imageRect)
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .stroke(observation.id == selectedObservationID ? Color.accentColor : Color.yellow.opacity(0.8), lineWidth: observation.id == selectedObservationID ? 3 : 1)
+                    .stroke(observation.layoutID == selectedObservationID ? Color.accentColor : Color.yellow.opacity(0.8), lineWidth: observation.layoutID == selectedObservationID ? 3 : 1)
                     .background(
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(observation.id == selectedObservationID ? Color.accentColor.opacity(0.18) : Color.yellow.opacity(0.10))
+                            .fill(observation.layoutID == selectedObservationID ? Color.accentColor.opacity(0.18) : Color.yellow.opacity(0.10))
                     )
                     .frame(width: rect.width, height: rect.height)
                     .offset(x: rect.minX, y: rect.minY)
@@ -95,11 +100,6 @@ private struct OCRLayoutOverlay: View {
     }
 }
 
-private extension OCRTextObservation {
-    var id: String {
-        "\(text)|\(boundingBox.x)|\(boundingBox.y)|\(boundingBox.width)|\(boundingBox.height)"
-    }
-}
 
 private struct ZoomableScrollView<Content: View>: UIViewRepresentable {
     let content: Content

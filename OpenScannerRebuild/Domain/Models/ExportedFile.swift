@@ -1,6 +1,6 @@
 import Foundation
 
-struct ExportedFile: Sendable {
+nonisolated struct ExportedFile: Equatable, Sendable {
     let url: URL
     let filename: String
 }

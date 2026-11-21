@@ -6,105 +6,110 @@ final class OpenScannerRebuildUITests: XCTestCase {
     }
 
     @MainActor
-    func testOpeningHomeShowsScansTitle() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing-empty"]
-        app.launch()
-
-        XCTAssertTrue(app.navigationBars["Scans"].waitForExistence(timeout: 2))
+    func testEmptyLibraryShowsScansTitleAndEmptyState() throws {
+        let app = XCUIApplication.launched("--ui-testing-empty")
+        XCTAssertTrue(app.navigationBars["Scans"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["No Scans Yet"].waitForExistence(timeout: 5))
     }
 
     @MainActor
-    func testTappingScanEntryPointShowsFriendlyFallback() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing-empty"]
-        app.launch()
+    func testScanEntryPointShowsFriendlyFallbackInSimulator() throws {
+        let app = XCUIApplication.launched("--ui-testing-empty")
 
-        let addBtn = app.buttons["AddScan"]
-        XCTAssertTrue(addBtn.waitForExistence(timeout: 5))
-        addBtn.tap()
+        let addButton = app.buttons["AddScan"]
+        XCTAssertTrue(addButton.waitForExistence(timeout: 10))
+        addButton.tap()
 
-        let scanBtn = app.buttons["Scan Document"]
-        XCTAssertTrue(scanBtn.waitForExistence(timeout: 5))
-        scanBtn.tap()
+        let scanButton = app.buttons["Scan Document"]
+        XCTAssertTrue(scanButton.waitForExistence(timeout: 5))
+        scanButton.tap()
 
-        XCTAssertTrue(app.alerts["Open Scanner"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.alerts["Scan Man"].waitForExistence(timeout: 5))
     }
 
     @MainActor
     func testOpeningSavedScanShowsDetail() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing-seed-scan"]
-        app.launch()
-
-        let scanRow = app.staticTexts["ScanTitle"]
-        XCTAssertTrue(scanRow.waitForExistence(timeout: 5))
-        scanRow.tap()
-
-        XCTAssertTrue(app.navigationBars["Seeded Invoice"].waitForExistence(timeout: 5))
+        let app = XCUIApplication.launched("--ui-testing-seed-scan")
+        app.openSeededScan()
+        XCTAssertTrue(app.buttons["AddPages"].exists)
     }
 
     @MainActor
-    func testSearchingScansFiltersTheList() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing-seed-scan"]
-        app.launch()
+    func testSearchingFiltersTheList() throws {
+        let app = XCUIApplication.launched("--ui-testing-seed-scan")
+        XCTAssertTrue(app.staticTexts["ScanTitle"].waitForExistence(timeout: 10))
 
-        let list = app.collectionViews.firstMatch
-        XCTAssertTrue(list.waitForExistence(timeout: 5))
-        list.swipeDown() // Ensure search bar is visible
-
+        app.collectionViews.firstMatch.swipeDown() // reveal the search field
         let searchField = app.searchFields.firstMatch
         XCTAssertTrue(searchField.waitForExistence(timeout: 5))
         searchField.tap()
-        
-        // Just verify it became active for now
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 2))
+
+        searchField.typeText("invoice")
+        XCTAssertTrue(app.staticTexts["ScanTitle"].waitForExistence(timeout: 5))
+
+        searchField.typeText("zzz")
+        XCTAssertTrue(app.staticTexts["ScanTitle"].waitForNonExistence(timeout: 5))
     }
 
     @MainActor
-    func testOpeningSavedPageShowsPreviewAndLayout() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing-seed-scan"]
-        app.launch()
+    func testOpeningPageShowsPreviewAndActions() throws {
+        let app = XCUIApplication.launched("--ui-testing-seed-scan")
+        app.openSeededScan()
+        app.openFirstPage()
 
-        let scanRow = app.staticTexts["ScanTitle"]
-        XCTAssertTrue(scanRow.waitForExistence(timeout: 5))
-        scanRow.tap()
-        
-        let pageBtn = app.buttons["Open page 1"]
-        XCTAssertTrue(pageBtn.waitForExistence(timeout: 5))
-        pageBtn.tap()
-
-        XCTAssertTrue(app.navigationBars["Page 1"].waitForExistence(timeout: 10))
+        let actions = app.buttons["PageActions"]
+        XCTAssertTrue(actions.waitForExistence(timeout: 5))
+        actions.tap()
+        XCTAssertTrue(app.buttons["Rotate Right"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Crop…"].exists)
     }
 
     @MainActor
-    func testEditingExtractedTextPersistsInCurrentFlow() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing-seed-scan"]
-        app.launch()
-
-        let scanRow = app.staticTexts["ScanTitle"]
-        XCTAssertTrue(scanRow.waitForExistence(timeout: 5))
-        scanRow.tap()
-        
-        let pageBtn = app.buttons["Open page 1"]
-        XCTAssertTrue(pageBtn.waitForExistence(timeout: 5))
-        pageBtn.tap()
+    func testEditingExtractedTextUpdatesThePageList() throws {
+        let app = XCUIApplication.launched("--ui-testing-seed-scan")
+        app.openSeededScan()
+        app.openFirstPage()
 
         let editor = app.textViews["Extracted text editor"]
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        app.scrollTo(editor)
         editor.tap()
-        _ = app.keyboards.firstMatch.waitForExistence(timeout: 3)
-        if app.menuItems["Select All"].waitForExistence(timeout: 1) {
-            app.menuItems["Select All"].tap()
-        }
-        app.typeText("Edited OCR text")
-        app.buttons["Save extracted text"].tap()
+        editor.typeText(" Edited OCR text")
 
+        let save = app.buttons["Save extracted text"]
+        app.scrollTo(save)
+        save.tap()
+
+        // Leave and reopen the page: the edit must have been stored.
         app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.openFirstPage()
 
-        XCTAssertTrue(app.staticTexts["Edited OCR text"].waitForExistence(timeout: 2))
+        let reopened = app.textViews["Extracted text editor"]
+        XCTAssertTrue(reopened.waitForExistence(timeout: 5))
+        XCTAssertTrue((reopened.value as? String ?? "").contains("Edited OCR text"))
+    }
+
+    @MainActor
+    func testSettingsCanBeOpenedAndClosed() throws {
+        let app = XCUIApplication.launched("--ui-testing-empty")
+
+        let settings = app.buttons["Settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 10))
+        settings.tap()
+
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Default Filter"].exists || app.buttons["Default Filter"].exists)
+        app.buttons["Done"].tap()
+        XCTAssertTrue(app.navigationBars["Scans"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testOnboardingIsShownOnFirstLaunch() throws {
+        let app = XCUIApplication.launched("--ui-testing-empty", "--ui-testing-onboarding")
+
+        XCTAssertTrue(app.staticTexts["Welcome to Scan Man"].waitForExistence(timeout: 10))
+        app.buttons["GetStarted"].tap()
+        XCTAssertTrue(app.staticTexts["Welcome to Scan Man"].waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Scans"].exists)
     }
 }

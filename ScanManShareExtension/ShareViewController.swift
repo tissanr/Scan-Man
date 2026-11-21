@@ -5,6 +5,7 @@ final class ShareViewController: UIViewController {
     private let statusLabel = UILabel()
     private let activityIndicator = UIActivityIndicatorView(style: .large)
     private let fileManager = FileManager.default
+    // Must match ImportInboxService.appGroupIdentifier in the app target.
     private let appGroupIdentifier = "group.me.tissanr.OpenScannerRebuild"
 
     override func viewDidLoad() {
@@ -69,9 +70,9 @@ final class ShareViewController: UIViewController {
             finish(with: "Saved \(savedCount) item\(savedCount == 1 ? "" : "s"). Open Scan Man to finish import.")
         } catch {
             statusLabel.text = "Scan Man could not save the shared item."
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                self.extensionContext?.cancelRequest(withError: error)
-            }
+            activityIndicator.stopAnimating()
+            try? await Task.sleep(for: .seconds(1.2))
+            extensionContext?.cancelRequest(withError: error)
         }
     }
 
@@ -91,66 +92,59 @@ final class ShareViewController: UIViewController {
     }
 
     private func save(provider: NSItemProvider, into directory: URL) async throws -> Bool {
+        let typeIdentifier: String
+        let fallbackExtension: String
         if provider.hasItemConformingToTypeIdentifier(UTType.pdf.identifier) {
-            let fileURL = try await loadFileRepresentation(from: provider, typeIdentifier: UTType.pdf.identifier)
-            try copySharedFile(at: fileURL, to: uniqueDestinationURL(in: directory, preferredName: provider.suggestedName, pathExtension: fileURL.pathExtension.isEmpty ? "pdf" : fileURL.pathExtension))
+            typeIdentifier = UTType.pdf.identifier
+            fallbackExtension = "pdf"
+        } else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+            typeIdentifier = UTType.image.identifier
+            fallbackExtension = "jpg"
+        } else {
+            return false
+        }
+
+        let suggestedName = provider.suggestedName
+        if try await copyFileRepresentation(from: provider, typeIdentifier: typeIdentifier, into: directory,
+                                            preferredName: suggestedName, fallbackExtension: fallbackExtension) {
             return true
         }
 
-        if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
-            if let fileURL = await loadOptionalFileRepresentation(from: provider, typeIdentifier: UTType.image.identifier) {
-                let pathExtension = fileURL.pathExtension.isEmpty ? "jpg" : fileURL.pathExtension
-                try copySharedFile(at: fileURL, to: uniqueDestinationURL(in: directory, preferredName: provider.suggestedName, pathExtension: pathExtension))
-                return true
-            }
-
-            let data = try await loadDataRepresentation(from: provider, typeIdentifier: UTType.image.identifier)
-            let destinationURL = uniqueDestinationURL(in: directory, preferredName: provider.suggestedName, pathExtension: "jpg")
-            try data.write(to: destinationURL, options: .atomic)
-            return true
-        }
-
-        return false
+        // Some providers (e.g. in-memory images) only offer data.
+        let data = try await loadDataRepresentation(from: provider, typeIdentifier: typeIdentifier)
+        try Self.write(data, into: directory, preferredName: suggestedName, pathExtension: fallbackExtension)
+        return true
     }
 
-    private func copySharedFile(at sourceURL: URL, to destinationURL: URL) throws {
-        if fileManager.fileExists(atPath: destinationURL.path) {
-            try fileManager.removeItem(at: destinationURL)
-        }
-
-        try fileManager.copyItem(at: sourceURL, to: destinationURL)
-    }
-
-    private func uniqueDestinationURL(in directory: URL, preferredName: String?, pathExtension: String) -> URL {
-        let baseName = (preferredName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? preferredName! : "Shared Import")
-            .replacingOccurrences(of: "/", with: "-")
-        let filename = "\(baseName)-\(UUID().uuidString.prefix(8))"
-        return directory.appendingPathComponent(filename).appendingPathExtension(pathExtension)
-    }
-
-    private func loadFileRepresentation(from provider: NSItemProvider, typeIdentifier: String) async throws -> URL {
+    /// Copies the provider's file. The URL handed to the completion handler is deleted when the
+    /// handler returns, so the copy has to happen inside it.
+    private func copyFileRepresentation(
+        from provider: NSItemProvider,
+        typeIdentifier: String,
+        into directory: URL,
+        preferredName: String?,
+        fallbackExtension: String
+    ) async throws -> Bool {
         try await withCheckedThrowingContinuation { continuation in
-            provider.loadFileRepresentation(forTypeIdentifier: typeIdentifier) { url, error in
-                if let url {
-                    continuation.resume(returning: url)
-                } else {
-                    continuation.resume(throwing: error ?? CocoaError(.fileReadUnknown))
+            _ = provider.loadFileRepresentation(forTypeIdentifier: typeIdentifier) { url, _ in
+                guard let url else {
+                    continuation.resume(returning: false)
+                    return
                 }
-            }
-        }
-    }
-
-    private func loadOptionalFileRepresentation(from provider: NSItemProvider, typeIdentifier: String) async -> URL? {
-        await withCheckedContinuation { continuation in
-            provider.loadFileRepresentation(forTypeIdentifier: typeIdentifier) { url, error in
-                continuation.resume(returning: url)
+                do {
+                    let pathExtension = url.pathExtension.isEmpty ? fallbackExtension : url.pathExtension
+                    try Self.copy(url, into: directory, preferredName: preferredName, pathExtension: pathExtension)
+                    continuation.resume(returning: true)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
             }
         }
     }
 
     private func loadDataRepresentation(from provider: NSItemProvider, typeIdentifier: String) async throws -> Data {
         try await withCheckedThrowingContinuation { continuation in
-            provider.loadDataRepresentation(forTypeIdentifier: typeIdentifier) { data, error in
+            _ = provider.loadDataRepresentation(forTypeIdentifier: typeIdentifier) { data, error in
                 if let data {
                     continuation.resume(returning: data)
                 } else {
@@ -160,12 +154,36 @@ final class ShareViewController: UIViewController {
         }
     }
 
+    // Files are written under a hidden name and then renamed, so the app (which skips hidden
+    // files) never imports a half-written file.
+
+    nonisolated private static func copy(_ source: URL, into directory: URL, preferredName: String?, pathExtension: String) throws {
+        let fileManager = FileManager.default
+        let staging = directory.appendingPathComponent(".staging-\(UUID().uuidString)")
+        try fileManager.copyItem(at: source, to: staging)
+        try fileManager.moveItem(at: staging, to: uniqueDestinationURL(in: directory, preferredName: preferredName, pathExtension: pathExtension))
+    }
+
+    nonisolated private static func write(_ data: Data, into directory: URL, preferredName: String?, pathExtension: String) throws {
+        let staging = directory.appendingPathComponent(".staging-\(UUID().uuidString)")
+        try data.write(to: staging, options: .atomic)
+        try FileManager.default.moveItem(at: staging, to: uniqueDestinationURL(in: directory, preferredName: preferredName, pathExtension: pathExtension))
+    }
+
+    nonisolated private static func uniqueDestinationURL(in directory: URL, preferredName: String?, pathExtension: String) -> URL {
+        let trimmed = preferredName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let baseName = (trimmed.isEmpty ? "Shared Import" : trimmed).replacingOccurrences(of: "/", with: "-")
+        let filename = "\(baseName)-\(UUID().uuidString.prefix(8))"
+        return directory.appendingPathComponent(filename).appendingPathExtension(pathExtension)
+    }
+
     private func finish(with message: String) {
         statusLabel.text = message
         activityIndicator.stopAnimating()
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            self.extensionContext?.completeRequest(returningItems: nil)
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(0.8))
+            extensionContext?.completeRequest(returningItems: nil)
         }
     }
 }

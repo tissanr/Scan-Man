@@ -5,59 +5,46 @@ final class AccessibilityTests: XCTestCase {
         continueAfterFailure = false
     }
 
-    @MainActor
-    func testHomeAccessibility() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing-seed-scan"]
-        app.launch()
-        
+    /// Simulator rendering makes the visual audits (contrast, clipping, Dynamic Type) unreliable;
+    /// structural audits (labels, traits, hit regions) still run.
+    private func audit(_ app: XCUIApplication) throws {
         try app.performAccessibilityAudit { issue in
-            // Skip noisy contrast and element detection issues in simulator
-            // Skip simulator-unreliable visual checks; keep structural audits
-            return issue.auditType == .contrast
+            issue.auditType == .contrast
                 || issue.auditType == .elementDetection
                 || issue.auditType == .textClipped
                 || issue.auditType == .dynamicType
         }
+    }
+
+    @MainActor
+    func testHomeAccessibility() throws {
+        let app = XCUIApplication.launched("--ui-testing-seed-scan")
+        XCTAssertTrue(app.staticTexts["ScanTitle"].waitForExistence(timeout: 10))
+        try audit(app)
     }
 
     @MainActor
     func testScanDetailAccessibility() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing-seed-scan"]
-        app.launch()
-        
-        XCTAssertTrue(app.staticTexts["Seeded Invoice"].waitForExistence(timeout: 5))
-        app.staticTexts["Seeded Invoice"].tap()
-        
-        try app.performAccessibilityAudit { issue in
-            // Skip simulator-unreliable visual checks; keep structural audits
-            return issue.auditType == .contrast
-                || issue.auditType == .elementDetection
-                || issue.auditType == .textClipped
-                || issue.auditType == .dynamicType
-        }
+        let app = XCUIApplication.launched("--ui-testing-seed-scan")
+        app.openSeededScan()
+        try audit(app)
     }
 
     @MainActor
     func testPagePreviewAccessibility() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing-seed-scan"]
-        app.launch()
-        
-        XCTAssertTrue(app.staticTexts["Seeded Invoice"].waitForExistence(timeout: 5))
-        app.staticTexts["Seeded Invoice"].tap()
-        
-        let openBtn = app.buttons["Open page 1"]
-        XCTAssertTrue(openBtn.waitForExistence(timeout: 5))
-        openBtn.tap()
-        
-        try app.performAccessibilityAudit { issue in
-            // Skip simulator-unreliable visual checks; keep structural audits
-            return issue.auditType == .contrast
-                || issue.auditType == .elementDetection
-                || issue.auditType == .textClipped
-                || issue.auditType == .dynamicType
-        }
+        let app = XCUIApplication.launched("--ui-testing-seed-scan")
+        app.openSeededScan()
+        app.openFirstPage()
+        try audit(app)
+    }
+
+    @MainActor
+    func testSettingsAccessibility() throws {
+        let app = XCUIApplication.launched("--ui-testing-empty")
+        let settings = app.buttons["Settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 10))
+        settings.tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+        try audit(app)
     }
 }

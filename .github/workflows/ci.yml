@@ -42,8 +42,12 @@ jobs:
     - name: Summarize errors and warnings
       if: always()
       run: |
-        grep -E "(error|warning): " xcodebuild.log | sort -u | head -200 || true
-        grep -E "✘|failed \(|Test Case .* failed|issue at" xcodebuild.log | head -100 || true
+        grep -E "(error|warning): " xcodebuild.log | grep -v appintentsmetadataprocessor | sort -u | head -200 || true
+        grep -E "✘|failed \(|Test Case .* failed|recorded an issue" xcodebuild.log | head -100 || true
+
+    - name: Code coverage
+      if: success()
+      run: python3 scripts/check-coverage.py TestResults.xcresult "$COVERAGE_THRESHOLD"
 
     - name: Upload Test Results
       if: always()
@@ -53,3 +57,11 @@ jobs:
         path: |
           TestResults.xcresult
           xcodebuild.log
+
+    - name: Upload snapshots
+      if: always()
+      uses: actions/upload-artifact@v5
+      with:
+        name: snapshots
+        path: OpenScannerRebuildTests/__Snapshots__
+        if-no-files-found: ignore

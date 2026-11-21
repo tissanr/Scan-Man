@@ -1,67 +1,50 @@
+import CoreGraphics
 import Foundation
-import UIKit
+import ImageIO
 import Vision
 
-struct VisionOCRService: OCRRecognizing {
+nonisolated struct VisionOCRService: OCRRecognizing {
     func recognizePage(in imageData: Data) async throws -> OCRPageContent {
-        guard let image = UIImage(data: imageData), let cgImage = image.cgImage else {
-            throw OCRServiceError.invalidImageData
-        }
-
-        return try await withCheckedThrowingContinuation { continuation in
-            let request = VNRecognizeTextRequest { request, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-
-                let observations = ((request.results as? [VNRecognizedTextObservation]) ?? [])
-                    .compactMap { observation -> OCRTextObservation? in
-                        guard let candidate = observation.topCandidates(1).first else {
-                            return nil
-                        }
-
-                        return OCRTextObservation(
-                            text: candidate.string.normalizedOCRText,
-                            boundingBox: OCRBoundingBox(
-                                x: observation.boundingBox.origin.x,
-                                y: observation.boundingBox.origin.y,
-                                width: observation.boundingBox.size.width,
-                                height: observation.boundingBox.size.height
-                            )
-                        )
-                    }
-                    .filter { !$0.text.isEmpty }
-
-                let text = observations
-                    .map(\.text)
-                    .joined(separator: "\n")
-                    .normalizedOCRText
-
-                continuation.resume(returning: OCRPageContent(text: text, observations: observations))
-            }
-
-            request.recognitionLevel = .accurate
-            request.usesLanguageCorrection = true
-            request.automaticallyDetectsLanguage = true
-
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-            do {
-                try handler.perform([request])
-            } catch {
-                continuation.resume(throwing: error)
-            }
-        }
+        try await Self.recognize(imageData)
     }
-}
 
-enum OCRServiceError: LocalizedError {
-    case invalidImageData
-
-    var errorDescription: String? {
-        switch self {
-        case .invalidImageData:
-            return "The scanned image could not be processed for OCR."
+    @concurrent
+    private static func recognize(_ imageData: Data) async throws -> OCRPageContent {
+        guard let source = CGImageSourceCreateWithData(imageData as CFData, nil),
+              let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            throw AppError.ocr("The scanned image could not be decoded")
         }
+
+        // Respect EXIF orientation so boxes match the image as it is displayed.
+        let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+        let rawOrientation = (properties?[kCGImagePropertyOrientation] as? UInt32) ?? 1
+        let orientation = CGImagePropertyOrientation(rawValue: rawOrientation) ?? .up
+
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = true
+        request.automaticallyDetectsLanguage = true
+
+        do {
+            try VNImageRequestHandler(cgImage: cgImage, orientation: orientation).perform([request])
+        } catch {
+            throw AppError.ocr(error.localizedDescription)
+        }
+
+        let observations = (request.results ?? []).compactMap { observation -> OCRTextObservation? in
+            guard let candidate = observation.topCandidates(1).first else {
+                return nil
+            }
+            let text = candidate.string.normalizedOCRText
+            guard !text.isEmpty else { return nil }
+            let box = observation.boundingBox
+            return OCRTextObservation(
+                text: text,
+                boundingBox: OCRBoundingBox(x: box.origin.x, y: box.origin.y, width: box.size.width, height: box.size.height)
+            )
+        }
+
+        let text = observations.map(\.text).joined(separator: "\n").normalizedOCRText
+        return OCRPageContent(text: text, observations: observations)
     }
 }

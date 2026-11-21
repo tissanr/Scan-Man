@@ -7,7 +7,6 @@ struct OpenScannerRebuildApp: App {
     var body: some Scene {
         WindowGroup {
             RootView(dependencies: dependencies)
-                .environment(\.managedObjectContext, dependencies.persistenceController.viewContext)
         }
     }
 }

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="2">
+    <entity name="ScanEntity" representedClassName="ScanEntity" syncable="YES">
+        <attribute name="coverThumbnailData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="notes" optional="NO" attributeType="String" defaultValueString=""/>
+        <attribute name="pageCount" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="previewText" optional="YES" attributeType="String"/>
+        <attribute name="searchText" optional="YES" attributeType="String"/>
+        <attribute name="title" optional="NO" attributeType="String"/>
+        <attribute name="updatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="pages" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ScanPageEntity" inverseName="scan" inverseEntity="ScanPageEntity"/>
+        <fetchIndex name="byUpdatedAt">
+            <fetchIndexElement property="updatedAt" type="Binary" order="descending"/>
+        </fetchIndex>
+        <fetchIndex name="byID">
+            <fetchIndexElement property="id" type="Binary" order="ascending"/>
+        </fetchIndex>
+    </entity>
+    <entity name="ScanPageEntity" representedClassName="ScanPageEntity" syncable="YES">
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="enhancement" optional="NO" attributeType="String" defaultValueString="original"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="imageData" optional="NO" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="ocrLayoutData" optional="YES" attributeType="Binary"/>
+        <attribute name="order" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="processedImageData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="recognizedText" optional="NO" attributeType="String"/>
+        <attribute name="thumbnailData" optional="NO" attributeType="Binary"/>
+        <relationship name="scan" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="ScanEntity" inverseName="pages" inverseEntity="ScanEntity"/>
+    </entity>
+</model>

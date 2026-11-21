@@ -1,45 +1,59 @@
 import Foundation
 
-/// A protocol defining the storage operations for scan documents.
+/// OCR output for one page, applied with ``ScanRepository/applyOCRResults(scanID:results:suggestedTitle:)``.
+nonisolated struct PageOCRResult: Equatable, Sendable {
+    let pageID: UUID
+    let text: String
+    let observations: [OCRTextObservation]
+}
+
+/// A new image for an existing page (after rotate, crop or a filter change).
+nonisolated struct PageImageUpdate: Equatable, Sendable {
+    var imageData: Data
+    var processedImageData: Data?
+    var enhancement: ImageEnhancement
+    var thumbnailData: Data
+    /// Clears text and layout because the page geometry changed (rotate/crop).
+    var resetsOCR: Bool
+}
+
+/// Storage for scans.
 ///
-/// Use this protocol to implement persistence layers for the application.
-protocol ScanRepository {
-    /// Fetches all stored scans.
-    /// - Returns: An array of ``ScanDocument`` objects.
-    func fetchScans() async throws -> [ScanDocument]
-    
-    /// Fetches a specific scan by its unique identifier.
-    /// - Parameter id: The UUID of the scan to fetch.
-    /// - Returns: A ``ScanDocument`` if found, otherwise nil.
+/// Every mutation is targeted (title, notes, one page, ...) so concurrent edits and background OCR
+/// never overwrite each other's changes.
+nonisolated protocol ScanRepository: Sendable {
+    /// Lightweight entries for the library list, newest first. Does not load page images.
+    func fetchSummaries() async throws -> [ScanSummary]
+
+    /// A complete scan including page images, or nil if it does not exist.
     func fetchScan(id: UUID) async throws -> ScanDocument?
-    
-    /// Saves or updates a scan document.
-    /// - Parameter scan: The ``ScanDocument`` to persist.
+
+    /// Inserts a new scan, or fully replaces an existing one.
     func save(scan: ScanDocument) async throws
-    
-    /// Updates the title of a specific scan.
-    /// - Parameters:
-    ///   - scanID: The identifier of the scan to update.
-    ///   - title: The new title for the scan.
+
     func updateTitle(scanID: UUID, title: String) async throws
-    
-    /// Updates the notes for a specific scan.
-    /// - Parameters:
-    ///   - scanID: The identifier of the scan to update.
-    ///   - notes: The new notes content.
     func updateNotes(scanID: UUID, notes: String) async throws
-    
-    /// Updates the recognized text for a specific page within a scan.
-    /// - Parameters:
-    ///   - scanID: The identifier of the scan.
-    ///   - pageID: The identifier of the page within the scan.
-    ///   - text: The new recognized text content.
     func updateRecognizedText(scanID: UUID, pageID: UUID, text: String) async throws
-    
-    /// Deletes a specific scan document.
-    /// - Parameter scanID: The identifier of the scan to delete.
+
+    /// Stores OCR output for pages that still exist. Text the user already entered is kept, and the
+    /// title is only replaced while it is still an app-generated placeholder. No-op if the scan was deleted.
+    func applyOCRResults(scanID: UUID, results: [PageOCRResult], suggestedTitle: String?) async throws
+
+    /// Appends pages after the current last page; their `order` values are reassigned.
+    func appendPages(scanID: UUID, pages: [ScanPage]) async throws
+
+    /// Deletes a page. Throws ``AppError/lastPageCannotBeDeleted`` for a scan's only page.
+    func deletePage(scanID: UUID, pageID: UUID) async throws
+
+    /// Rewrites page order to match `orderedPageIDs`.
+    func reorderPages(scanID: UUID, orderedPageIDs: [UUID]) async throws
+
+    func replacePageImage(scanID: UUID, pageID: UUID, update: PageImageUpdate) async throws
+
     func delete(scanID: UUID) async throws
-    
-    /// Deletes all stored scan documents.
     func deleteAll() async throws
+
+    /// Fills summary fields for scans stored by older app versions. Returns how many scans were updated.
+    @discardableResult
+    func rebuildDerivedFieldsIfNeeded() async throws -> Int
 }

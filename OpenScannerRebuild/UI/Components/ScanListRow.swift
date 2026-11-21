@@ -2,7 +2,8 @@ import SwiftUI
 import UIKit
 
 struct ScanListRow: View {
-    let scan: ScanDocument
+    let scan: ScanSummary
+    var isRecognizingText = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -13,6 +14,7 @@ struct ScanListRow: View {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
                 }
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(scan.title)
@@ -20,11 +22,15 @@ struct ScanListRow: View {
                     .foregroundStyle(.primary)
                     .accessibilityIdentifier("ScanTitle")
 
-                Text(scan.updatedAt.scanTimestampLabel)
+                Text("\(scan.updatedAt.scanTimestampLabel) · \(scan.pageCount) \(scan.pageCount == 1 ? "page" : "pages")")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                if !scan.previewText.isEmpty {
+                if isRecognizingText {
+                    Label("Reading text…", systemImage: "text.viewfinder")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else if !scan.previewText.isEmpty {
                     Text(scan.previewText)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -37,8 +43,7 @@ struct ScanListRow: View {
 
     @ViewBuilder
     private var thumbnail: some View {
-        if let page = scan.pages.sorted(by: { $0.order < $1.order }).first,
-           let image = UIImage(data: page.thumbnailData.isEmpty ? page.imageData : page.thumbnailData) {
+        if let data = scan.thumbnailData, let image = UIImage(data: data) {
             Image(uiImage: image)
                 .resizable()
                 .scaledToFill()
