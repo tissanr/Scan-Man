@@ -2,52 +2,45 @@
 
 Scan Man is a local-first iOS document scanner built with Apple frameworks only.
 
-## Stack
+## Features
 
+- Multi-page scanning with VisionKit; import from Photos, PDF files, the share sheet, or the Files import folder.
+- On-device text recognition (Vision) with search across titles, notes and page text.
+- Searchable PDF export (invisible text aligned to each line), plain PDF and text export; A4, US Letter or fit-to-image pages.
+- Page management: reorder, delete, rotate, crop with perspective correction, add pages.
+- Per-page filters (Enhanced, Grayscale, Black & White), non-destructive.
+- App lock with Face ID / Touch ID / passcode. No accounts, analytics or network access.
+
+## Requirements
+
+- Xcode 26 or newer (the project uses Swift 6 with default MainActor isolation)
 - iOS 17+
-- SwiftUI for app UI
-- VisionKit for document capture
-- Vision for OCR
-- PDFKit and Core Graphics for export
-- Core Data for local persistence
+- No third-party dependencies
 
-## Local Build Notes
+## Build and Test
 
-- Open `OpenScannerRebuild.xcodeproj` in Xcode 16 or newer.
-- Select a Personal Team signing identity for the app target.
-- The app is designed to run fully offline with local storage only.
-- Camera scanning is unavailable in the simulator; the app should show a friendly message instead of crashing.
-- UI tests can seed demo content by launching with `--ui-testing-seed-scan`.
+```bash
+make build        # Build for the newest available iPhone simulator
+make test         # Unit + UI tests with a coverage report
+make screenshot   # App Store screenshots (attached to the test results)
+```
 
-## Current Status
+Camera scanning is unavailable in the simulator; the app shows a message instead. UI tests use launch arguments such as `--ui-testing-seed-scan` and `--ui-testing-empty` (see `AppSeeder`).
 
-- Delivered phases: 1, 2, 3, 4
-- Clean architecture baseline is in place.
-- Home and detail flows use local Core Data-backed models.
-- VisionKit capture, OCR-backed search, per-page OCR text editing, text export, and searchable PDF export with OCR geometry alignment are implemented.
-- Page detail now includes OCR geometry-aware preview overlays and a richer in-app reading presentation when layout data is available.
-- Simulator fallback is explicit in the UI when document scanning is unavailable.
-- UI tests cover the home screen, scan entry fallback, opening saved scans, searching, page preview, and page text editing.
-- Phase 5 is implemented as Apple-native input and lightweight editing expansion:
-  - import from Photos and PDF files maps into the same local `ScanDocument`/`ScanPage` model as camera scans
-  - imported scans go through the same OCR, search, detail, and export paths as scanner-created scans
-  - scan-level local notes provide minimal annotation without changing the PDF export pipeline
-  - a Files-visible inbox now exists at `Files > On My iPhone > Scan Man > Scan Man Imports`
-  - Scan Man re-checks that inbox whenever the app becomes active and imports supported image/PDF files into the library
-  - the iOS share menu can send images and PDFs to the Scan Man share extension, which stages them for the same import/OCR flow
+To run on a device, select your signing team for the app and the share extension. The share extension needs the App Group `group.me.tissanr.OpenScannerRebuild`.
 
-## Phase 5 Export And Sync Decision
+## Import Folder
 
-- v1 baseline: keep `UIActivityViewController` share/export and Files providers as the default export path. This already covers AirDrop, Mail, Messages, Files, and installed document providers with the lowest implementation and support cost.
-- Defer saved destinations and one-tap repeat export. They are viable on top of Apple document APIs and security-scoped bookmarks, but they add state management and recovery work that is not necessary for the first useful version.
-- Do not add direct Nextcloud export in v1. A WebDAV flow would need account storage, app-password handling, remote folder selection, upload progress, retries, and conflict semantics before it becomes more valuable than the system share sheet.
-- Do not add Syncthing-specific sync in v1. iOS sandboxing and background limits make it a constrained handoff problem rather than a clean native sync integration, so the practical baseline remains Files-based export into any user-managed folder workflow.
-- Keep local-only behavior as a first-class mode. Optional sync can be evaluated later only if it is isolated from the local data path and does not weaken offline reliability.
+`Files > On My iPhone > Scan Man > Scan Man Imports`. Images and PDFs placed there are imported the next time Scan Man becomes active and then removed from the folder. Images arriving together become one multi-page scan; each PDF becomes its own scan. Files shared through the share sheet are staged in the App Group and imported the same way.
 
-## Phase 5 Import Notes
+## Export Decision
 
-- Files inbox path on device: `Files > On My iPhone > Scan Man > Scan Man Imports`
-- Supported inbox payloads: images and PDFs
-- Shared images/PDFs are first staged by the share extension, then imported into the main library the next time Scan Man becomes active
-- Imported source files are consumed from the inbox after a successful import so they are not duplicated on every launch
-- The share extension uses an App Group to pass files to the main app, which means signing must allow the `group.me.tissanr.OpenScannerRebuild` capability
+The system share sheet and Files are the export story for v1: they already cover AirDrop, Mail, Messages and every installed document provider. Direct Nextcloud/WebDAV upload, Syncthing-oriented auto-export and iCloud sync are planned after v1 (Phases 10–12 in `ROADMAP.md`).
+
+## Documents
+
+- `ROADMAP.md`: phases and status
+- `SPEC.md`: product requirements and constraints
+- `RELEASE.md`: App Store checklist and rollout plan
+- `PRIVACY.md`: privacy policy
+- `CLAUDE.md`: architecture and code standards

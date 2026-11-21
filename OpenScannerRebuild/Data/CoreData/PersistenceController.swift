@@ -48,7 +48,7 @@ nonisolated final class PersistenceController: @unchecked Sendable {
             capturedError = error
         }
         container.viewContext.automaticallyMergesChangesFromParent = true
-        container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        container.viewContext.mergePolicy = NSMergePolicy(merge: .mergeByPropertyObjectTrumpMergePolicyType)
 
         if let capturedError {
             Logger.persistence.fault("Failed to load persistent store: \(capturedError.localizedDescription, privacy: .public)")
@@ -67,7 +67,7 @@ nonisolated final class PersistenceController: @unchecked Sendable {
         }
 
         return try await container.performBackgroundTask { context in
-            context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+            context.mergePolicy = NSMergePolicy(merge: .mergeByPropertyObjectTrumpMergePolicyType)
             let result = try work(context)
             if context.hasChanges {
                 try context.save()

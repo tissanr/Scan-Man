@@ -16,7 +16,7 @@ Build a native iOS document scanning app called Scan Man using Apple frameworks 
 ## Platform
 
 - iOS 17+
-- Swift 5+
+- Swift 6 (Xcode 26)
 - SwiftUI
 - VisionKit
 - Vision
@@ -31,10 +31,13 @@ Build a native iOS document scanning app called Scan Man using Apple frameworks 
 - `Features/Scan`
 - `Features/ScanDetail`
 - `Features/Share`
+- `Features/Settings`
+- `Features/Onboarding`
 - `Data/CoreData`
 - `Domain/Models`
 - `Services/OCR`
 - `Services/PDFExport`
+- `Services/Imaging`
 - `Services/Scanning`
 - `UI/Components`
 - `Utilities`
@@ -59,14 +62,9 @@ Build a native iOS document scanning app called Scan Man using Apple frameworks 
 
 ## Delivered Status
 
-- Phase 1: delivered
-- Phase 2: delivered
-- Phase 3: delivered
-- Phase 4: delivered
-- Phase 5: delivered
-- Phase 6: planned
+See `ROADMAP.md` for the current status of every phase. Phases 1–5 and 7–9 are delivered; Phase 6 was split into 6a (fixes), 6b (core scanner features) and 6c (release preparation).
 
-## Remaining Formal Phases
+## Historical Phase Notes
 
 ### Phase 5: Optional Sync And Extended Inputs
 
