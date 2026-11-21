@@ -102,7 +102,7 @@ Done in code:
 
 Open (manual, see `RELEASE.md`):
 
-- App icon artwork (the asset catalog has no image yet).
+- Final app icon artwork (a generated placeholder is in place).
 - Privacy policy URL, App Store copy, screenshots on required device sizes.
 - TestFlight internal and external beta, crash and feedback triage, go/no-go review.
 

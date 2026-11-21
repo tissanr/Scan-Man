@@ -5,6 +5,10 @@ struct PagePreviewView: View {
     let page: ScanPage
     var selectedObservationID: String? = nil
 
+    private var imageAccessibilityLabel: String {
+        page.previewText.isEmpty ? "Scanned page" : "Scanned page. \(page.previewText)"
+    }
+
     var body: some View {
         Group {
             if let image = UIImage(data: page.displayImageData) {
@@ -16,9 +20,7 @@ struct PagePreviewView: View {
                                 .scaledToFit()
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .background(Color.black)
-                                .accessibilityLabel(page.recognizedText.isEmpty
-                                    ? "Scanned page"
-                                    : "Scanned page. \(page.previewText)")
+                                .accessibilityLabel(imageAccessibilityLabel)
 
                             OCRLayoutOverlay(
                                 page: page,

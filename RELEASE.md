@@ -4,7 +4,7 @@ How Scan Man goes from `main` to the App Store. Items marked **(manual)** cannot
 
 ## 1. Before the first build
 
-- [ ] **(manual)** App icon: add a 1024×1024 PNG (plus dark and tinted variants) to `Assets.xcassets/AppIcon.appiconset`. The catalog currently has no image, and App Store Connect rejects builds without an icon.
+- [ ] **(manual)** App icon: `AppIcon.png` is a generated placeholder (document with scan brackets). Replace it with final artwork and add dark and tinted variants in `Assets.xcassets/AppIcon.appiconset`.
 - [ ] **(manual)** In App Store Connect, create the app with bundle ID `me.tissanr.OpenScannerRebuild` and enable the App Group `group.me.tissanr.OpenScannerRebuild` for both the app and the share extension (`me.tissanr.OpenScannerRebuild.ShareExtension`).
 - [ ] **(manual)** Host `PRIVACY.md` (for example with GitHub Pages) and note the URL.
 - [ ] Bump `MARKETING_VERSION` (1.0) and `CURRENT_PROJECT_VERSION` for every upload.

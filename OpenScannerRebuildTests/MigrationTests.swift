@@ -1,5 +1,7 @@
 import CoreData
+import CoreGraphics
 import Foundation
+import UIKit
 import Testing
 @testable import OpenScannerRebuild
 

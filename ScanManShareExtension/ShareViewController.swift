@@ -126,7 +126,7 @@ final class ShareViewController: UIViewController {
         fallbackExtension: String
     ) async throws -> Bool {
         try await withCheckedThrowingContinuation { continuation in
-            _ = provider.loadFileRepresentation(forTypeIdentifier: typeIdentifier) { url, _ in
+            _ = provider.loadFileRepresentation(forTypeIdentifier: typeIdentifier) { @Sendable url, _ in
                 guard let url else {
                     continuation.resume(returning: false)
                     return
@@ -144,7 +144,7 @@ final class ShareViewController: UIViewController {
 
     private func loadDataRepresentation(from provider: NSItemProvider, typeIdentifier: String) async throws -> Data {
         try await withCheckedThrowingContinuation { continuation in
-            _ = provider.loadDataRepresentation(forTypeIdentifier: typeIdentifier) { data, error in
+            _ = provider.loadDataRepresentation(forTypeIdentifier: typeIdentifier) { @Sendable data, error in
                 if let data {
                     continuation.resume(returning: data)
                 } else {

@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import UIKit
 @testable import OpenScannerRebuild
