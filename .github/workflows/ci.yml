@@ -10,7 +10,7 @@ jobs:
   build-and-test:
     runs-on: macos-26
     env:
-      COVERAGE_THRESHOLD: "0"
+      COVERAGE_THRESHOLD: "75"
 
     steps:
     - uses: actions/checkout@v5

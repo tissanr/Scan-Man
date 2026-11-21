@@ -69,7 +69,7 @@ Phase 6 was split in three: release work only makes sense once the core scanning
 
 - Core Data migration test: a store written with model v1 is opened with model v2.
 - Automated accessibility audits in UI tests (structural audits; visual audits are skipped on the simulator).
-- Code coverage report and threshold in CI (`scripts/check-coverage.py`).
+- Code coverage report in CI with a 75% floor for the app target (`scripts/check-coverage.py`; 79% at the time of writing).
 - Pixel snapshot tests for the OCR overlay (`OpenScannerRebuildTests/__Snapshots__`).
 
 ## Phase 6a: Fixes and Making Docs Match Code

@@ -19,7 +19,7 @@ build:
 test:
 	rm -rf build/TestResults.xcresult
 	xcodebuild test -project $(PROJECT) -scheme $(SCHEME) -destination '$(SIMULATOR)' CODE_SIGNING_ALLOWED=NO -enableCodeCoverage YES -parallel-testing-enabled NO -resultBundlePath build/TestResults.xcresult
-	python3 scripts/check-coverage.py build/TestResults.xcresult
+	python3 scripts/check-coverage.py build/TestResults.xcresult 75
 
 clean:
 	xcodebuild clean -project $(PROJECT) -scheme $(SCHEME)
