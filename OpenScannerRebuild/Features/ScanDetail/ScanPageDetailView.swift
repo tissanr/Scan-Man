@@ -10,6 +10,7 @@ struct ScanPageDetailView: View {
     @State private var selectedObservationID: String?
     @State private var isSaving = false
     @State private var cropRequest: CropRequest?
+    @FocusState private var isEditingText: Bool
 
     private var page: ScanPage? {
         viewModel.page(for: pageID)
@@ -90,9 +91,11 @@ struct ScanPageDetailView: View {
             Section("Extracted Text") {
                 TextEditor(text: $editedText)
                     .frame(minHeight: 180)
+                    .focused($isEditingText)
                     .accessibilityLabel("Extracted text editor")
 
                 Button(isSaving ? "Saving…" : "Save Text") {
+                    isEditingText = false
                     Task { await save() }
                 }
                 .disabled(isSaving || editedText.normalizedOCRText == page.recognizedText)
@@ -106,9 +109,15 @@ struct ScanPageDetailView: View {
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
             }
         }
+        .scrollDismissesKeyboard(.interactively)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 pageActions(for: page)
+            }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { isEditingText = false }
+                    .accessibilityIdentifier("DismissKeyboard")
             }
         }
     }

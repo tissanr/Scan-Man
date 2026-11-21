@@ -73,10 +73,20 @@ final class OpenScannerRebuildUITests: XCTestCase {
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
         app.focus(editor)
         editor.typeText(" Edited OCR text")
+        XCTAssertTrue((editor.value as? String ?? "").contains("Edited OCR text"))
+
+        // Dismiss the keyboard so it doesn't cover the Save button.
+        let done = app.buttons["DismissKeyboard"]
+        if done.waitForExistence(timeout: 3) {
+            done.tap()
+        }
 
         let save = app.buttons["Save extracted text"]
         app.scrollTo(save)
+        XCTAssertTrue(save.isEnabled)
         save.tap()
+        // Once stored, the editor matches the saved text and Save disables again.
+        XCTAssertTrue(save.wait(for: \.isEnabled, toEqual: false, timeout: 5))
 
         // Leave and reopen the page: the edit must have been stored.
         app.navigationBars.buttons.element(boundBy: 0).tap()
