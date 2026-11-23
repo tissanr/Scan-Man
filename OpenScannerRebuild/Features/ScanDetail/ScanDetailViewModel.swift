@@ -5,15 +5,24 @@ import Combine
 final class ScanDetailViewModel: ObservableObject {
     private let repository: ScanRepository
     private let pdfExporter: PDFExporting
+    private let onScanUpdated: (ScanDocument) -> Void
+    private var persistedTitle: String
 
     @Published private(set) var scan: ScanDocument
     @Published private(set) var activeErrorMessage: String?
     @Published private(set) var exportedFile: ExportedFile?
 
-    init(scan: ScanDocument, repository: ScanRepository, pdfExporter: PDFExporting) {
+    init(
+        scan: ScanDocument,
+        repository: ScanRepository,
+        pdfExporter: PDFExporting,
+        onScanUpdated: @escaping (ScanDocument) -> Void = { _ in }
+    ) {
         self.scan = scan
         self.repository = repository
         self.pdfExporter = pdfExporter
+        self.onScanUpdated = onScanUpdated
+        self.persistedTitle = scan.title
     }
 
     var title: String {
@@ -34,10 +43,27 @@ final class ScanDetailViewModel: ObservableObject {
         }
     }
 
+    /// Persists the edited title. Blank titles revert to the last saved one.
     func saveTitle() async {
+        let trimmedTitle = scan.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty, trimmedTitle != persistedTitle else {
+            title = persistedTitle
+            return
+        }
+
+        let previousTitle = persistedTitle
+        var updatedScan = scan
+        updatedScan.title = trimmedTitle
+        updatedScan.updatedAt = Date()
+        scan = updatedScan
+        persistedTitle = trimmedTitle
+
         do {
-            try await repository.updateTitle(scanID: scan.id, title: scan.title)
+            try await repository.updateTitle(scanID: scan.id, title: trimmedTitle)
+            onScanUpdated(scan)
         } catch {
+            persistedTitle = previousTitle
+            title = previousTitle
             activeErrorMessage = "Unable to rename that scan."
         }
     }
@@ -46,6 +72,7 @@ final class ScanDetailViewModel: ObservableObject {
         do {
             if let refreshed = try await repository.fetchScan(id: scan.id) {
                 scan = refreshed
+                persistedTitle = refreshed.title
             }
         } catch {
             activeErrorMessage = "Unable to refresh this scan."
@@ -62,6 +89,7 @@ final class ScanDetailViewModel: ObservableObject {
 
         do {
             try await repository.updateNotes(scanID: scan.id, notes: trimmedNotes)
+            onScanUpdated(scan)
             return true
         } catch {
             scan = originalScan
@@ -90,6 +118,7 @@ final class ScanDetailViewModel: ObservableObject {
 
         do {
             try await repository.updateRecognizedText(scanID: scan.id, pageID: pageID, text: normalizedText)
+            onScanUpdated(scan)
             return true
         } catch {
             var revertedScan = scan

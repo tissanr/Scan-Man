@@ -86,7 +86,7 @@ struct ScanPageDetailView: View {
         .navigationTitle("Page \(currentPage.order + 1)")
         .navigationBarTitleDisplayMode(.inline)
         .alert(
-            "Open Scanner",
+            "Scan Man",
             isPresented: Binding(
                 get: { activeErrorMessage != nil },
                 set: { presented in
@@ -113,7 +113,7 @@ struct ScanPageDetailView: View {
         isSaving = false
 
         guard didSave else {
-            activeErrorMessage = "Open Scanner could not save the edited text."
+            activeErrorMessage = "Scan Man could not save the edited text."
             return
         }
 

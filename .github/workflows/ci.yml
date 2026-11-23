@@ -6,26 +6,38 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
-    runs-on: macos-15
+    # The project relies on Xcode 26+ build settings (default MainActor isolation,
+    # approachable concurrency, @concurrent), so it needs a macOS 26 runner.
+    runs-on: macos-26
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
-    - name: Select Xcode
-      run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+    - name: Show Xcode version
+      run: xcodebuild -version
 
     - name: Build and Test
       run: |
+        DESTINATION="$(scripts/simulator-destination.sh)"
+        echo "Using destination: $DESTINATION"
         xcodebuild test \
           -project OpenScannerRebuild.xcodeproj \
           -scheme OpenScannerRebuild \
-          -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \
+          -destination "$DESTINATION" \
           -resultBundlePath TestResults.xcresult \
           -enableCodeCoverage YES \
           -parallel-testing-enabled NO \
           CODE_SIGNING_ALLOWED=NO
+
+    - name: Coverage summary
+      if: always()
+      run: xcrun xccov view --report --only-targets TestResults.xcresult || true
 
     - name: Upload Test Results
       if: always()

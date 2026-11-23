@@ -112,6 +112,12 @@ struct ScanDetailView: View {
             await viewModel.refresh()
             notesDraft = viewModel.notes
         }
+        .onDisappear {
+            // Keep a title edit even if the user navigates back without pressing Return.
+            Task {
+                await viewModel.saveTitle()
+            }
+        }
         .sheet(
             isPresented: Binding(
                 get: { viewModel.exportedFile != nil },
@@ -127,7 +133,7 @@ struct ScanDetailView: View {
             }
         }
         .alert(
-            "Open Scanner",
+            "Scan Man",
             isPresented: Binding(
                 get: { viewModel.activeErrorMessage != nil },
                 set: { presented in

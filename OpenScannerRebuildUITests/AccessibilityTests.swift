@@ -1,8 +1,11 @@
 import XCTest
 
 final class AccessibilityTests: XCTestCase {
-    override func setUpWithError() throws {
+    @MainActor
+    override func setUp() async throws {
         continueAfterFailure = false
+        // The launch tests run once per UI configuration and can leave the simulator rotated.
+        XCUIDevice.shared.orientation = .portrait
     }
 
     @MainActor
@@ -11,14 +14,7 @@ final class AccessibilityTests: XCTestCase {
         app.launchArguments = ["--ui-testing-seed-scan"]
         app.launch()
         
-        try app.performAccessibilityAudit { issue in
-            // Skip noisy contrast and element detection issues in simulator
-            // Skip simulator-unreliable visual checks; keep structural audits
-            return issue.auditType == .contrast
-                || issue.auditType == .elementDetection
-                || issue.auditType == .textClipped
-                || issue.auditType == .dynamicType
-        }
+        try app.performAccessibilityAudit(for: .all, Self.isIgnored)
     }
 
     @MainActor
@@ -30,13 +26,7 @@ final class AccessibilityTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Seeded Invoice"].waitForExistence(timeout: 5))
         app.staticTexts["Seeded Invoice"].tap()
         
-        try app.performAccessibilityAudit { issue in
-            // Skip simulator-unreliable visual checks; keep structural audits
-            return issue.auditType == .contrast
-                || issue.auditType == .elementDetection
-                || issue.auditType == .textClipped
-                || issue.auditType == .dynamicType
-        }
+        try app.performAccessibilityAudit(for: .all, Self.isIgnored)
     }
 
     @MainActor
@@ -52,12 +42,22 @@ final class AccessibilityTests: XCTestCase {
         XCTAssertTrue(openBtn.waitForExistence(timeout: 5))
         openBtn.tap()
         
-        try app.performAccessibilityAudit { issue in
-            // Skip simulator-unreliable visual checks; keep structural audits
-            return issue.auditType == .contrast
-                || issue.auditType == .elementDetection
-                || issue.auditType == .textClipped
-                || issue.auditType == .dynamicType
+        try app.performAccessibilityAudit(for: .all, Self.isIgnored)
+    }
+
+    /// Skips simulator-unreliable visual checks while keeping the structural audits.
+    @MainActor
+    private static func isIgnored(_ issue: XCUIAccessibilityAuditIssue) -> Bool {
+        switch issue.auditType {
+        case .contrast, .elementDetection, .textClipped, .dynamicType:
+            return true
+        case .hitRegion:
+            // On iOS 26 the library's system search field stays in the hierarchy, collapsed,
+            // after pushing a detail screen. It's a UIKit component, not app UI.
+            return issue.compactDescription.contains("UISearchBarTextField")
+                || issue.element?.elementType == .searchField
+        default:
+            return false
         }
     }
 }

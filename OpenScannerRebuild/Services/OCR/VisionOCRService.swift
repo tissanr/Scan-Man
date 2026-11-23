@@ -2,7 +2,10 @@ import Foundation
 import UIKit
 import Vision
 
-struct VisionOCRService: OCRRecognizing {
+/// The app target defaults to `MainActor` isolation, so recognition is explicitly moved to the
+/// concurrent executor; otherwise `VNImageRequestHandler.perform` would block the main thread.
+nonisolated struct VisionOCRService: OCRRecognizing {
+    @concurrent
     func recognizePage(in imageData: Data) async throws -> OCRPageContent {
         guard let image = UIImage(data: imageData), let cgImage = image.cgImage else {
             throw OCRServiceError.invalidImageData

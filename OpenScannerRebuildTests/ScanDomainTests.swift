@@ -212,9 +212,9 @@ struct ScanDomainTests {
     }
 
     @Test
-    func searchablePDFUsesObservationTextAndStillSupportsSelection() throws {
+    func searchablePDFEmbedsAlignedObservationTextExactlyOnce() throws {
         let service = PDFExportService()
-        var page = TestData.page(order: 0, text: "Fallback text")
+        var page = TestData.page(order: 0, text: "Aligned Text")
         page.textObservations = [
             OCRTextObservation(
                 text: "Aligned Text",
@@ -225,7 +225,148 @@ struct ScanDomainTests {
 
         let exported = try service.export(scan: scan, mode: .searchable)
         let document = try #require(PDFDocument(url: exported.url))
+        let pdfPage = try #require(document.page(at: 0))
 
-        #expect(document.string?.contains("Aligned Text") == true)
+        let matches = document.findString("Aligned Text", withOptions: [])
+        #expect(matches.count == 1)
+
+        // The 600x900 test image is fitted into the 564x744 content box of a 612x792 page,
+        // giving a drawn image 496pt wide starting at x = 58.
+        let bounds = try #require(matches.first).bounds(for: pdfPage)
+        #expect(abs(bounds.minX - (58 + 496 * 0.2)) < 4)
+        #expect(abs(bounds.width - 496 * 0.35) < 10)
+    }
+
+    @Test
+    func searchablePDFPrefersEditedTextOverStaleGeometry() throws {
+        let service = PDFExportService()
+        var page = TestData.page(order: 0, text: "Edited text")
+        page.textObservations = [
+            OCRTextObservation(
+                text: "Original OCR",
+                boundingBox: OCRBoundingBox(x: 0.2, y: 0.6, width: 0.35, height: 0.08)
+            )
+        ]
+        let scan = TestData.scan(title: "Edited", pages: [page])
+
+        let exported = try service.export(scan: scan, mode: .searchable)
+        let document = try #require(PDFDocument(url: exported.url))
+
+        #expect(document.findString("Edited text", withOptions: []).count == 1)
+        #expect(document.string?.contains("Original OCR") == false)
+    }
+
+    @Test
+    func imageOnlyPDFContainsNoText() throws {
+        let service = PDFExportService()
+        let scan = TestData.scan(title: "Plain", pages: [TestData.page(order: 0, text: "Should not appear")])
+
+        let exported = try service.export(scan: scan, mode: .imageOnly)
+        let document = try #require(PDFDocument(url: exported.url))
+
+        #expect(document.string?.contains("Should not appear") != true)
+    }
+
+    @Test
+    func ocrResultKeepsTitleAndNotesEditedWhileProcessing() async throws {
+        let original = TestData.scan(title: "Scan Jan 1", pages: [TestData.page(order: 0, text: "")])
+        var ocrScan = original
+        ocrScan.title = "Invoice 42"
+        ocrScan.pages[0].recognizedText = "Invoice 42"
+
+        var renamed = original
+        renamed.title = "My Tax Docs"
+        renamed.notes = "Keep for 10 years"
+        let repository = StubScanRepository(scans: [renamed])
+        let viewModel = makeHomeViewModel(repository: repository, ocrResult: ocrScan)
+
+        await viewModel.processOCR(for: original)
+
+        let saved = try #require(repository.savedScans.last)
+        #expect(saved.title == "My Tax Docs")
+        #expect(saved.notes == "Keep for 10 years")
+        #expect(saved.pages.first?.recognizedText == "Invoice 42")
+    }
+
+    @Test
+    func ocrResultAppliesSuggestedTitleWhenUserDidNotRename() async throws {
+        let original = TestData.scan(title: "Scan Jan 1", pages: [TestData.page(order: 0, text: "")])
+        var ocrScan = original
+        ocrScan.title = "Invoice 42"
+        let repository = StubScanRepository(scans: [original])
+        let viewModel = makeHomeViewModel(repository: repository, ocrResult: ocrScan)
+
+        await viewModel.processOCR(for: original)
+
+        #expect(try #require(repository.savedScans.last).title == "Invoice 42")
+    }
+
+    @Test
+    func ocrResultDoesNotResurrectScanDeletedWhileProcessing() async {
+        let original = TestData.scan(title: "Scan Jan 1", pages: [TestData.page(order: 0, text: "")])
+        let repository = StubScanRepository(scans: [])
+        let viewModel = makeHomeViewModel(repository: repository, ocrResult: original)
+
+        await viewModel.processOCR(for: original)
+
+        #expect(repository.savedScans.isEmpty)
+        #expect(repository.storedScans.isEmpty)
+    }
+
+    @Test
+    func renamingTrimsTitleAndNotifiesLibrary() async {
+        let scan = TestData.scan(title: "Old", pages: [TestData.page(order: 0, text: "Body")])
+        let repository = StubScanRepository(scans: [scan])
+        var notified: [ScanDocument] = []
+        let viewModel = ScanDetailViewModel(
+            scan: scan,
+            repository: repository,
+            pdfExporter: PDFExportService(),
+            onScanUpdated: { notified.append($0) }
+        )
+
+        viewModel.title = "  New Title  "
+        await viewModel.saveTitle()
+
+        #expect(viewModel.title == "New Title")
+        #expect(repository.storedScans.first?.title == "New Title")
+        #expect(notified.map(\.title) == ["New Title"])
+    }
+
+    @Test
+    func blankTitleRevertsToLastSavedTitle() async {
+        let scan = TestData.scan(title: "Keep Me", pages: [TestData.page(order: 0, text: "Body")])
+        let repository = StubScanRepository(scans: [scan])
+        let viewModel = ScanDetailViewModel(scan: scan, repository: repository, pdfExporter: PDFExportService())
+
+        viewModel.title = "   "
+        await viewModel.saveTitle()
+
+        #expect(viewModel.title == "Keep Me")
+        #expect(repository.storedScans.first?.title == "Keep Me")
+    }
+
+    @Test
+    func libraryReflectsEditsMadeInDetail() async {
+        let scan = TestData.scan(title: "Before", pages: [TestData.page(order: 0, text: "Body")])
+        let viewModel = makeHomeViewModel(repository: StubScanRepository(scans: [scan]), ocrResult: scan)
+        await viewModel.load()
+
+        var edited = scan
+        edited.title = "After"
+        viewModel.applyUpdatedScan(edited)
+
+        #expect(viewModel.scans.map(\.title) == ["After"])
+    }
+
+    private func makeHomeViewModel(repository: StubScanRepository, ocrResult: ScanDocument) -> HomeViewModel {
+        HomeViewModel(
+            repository: repository,
+            titleSuggester: TitleSuggestionService(),
+            ocrProcessor: StubOCRProcessor(result: ScanOCRProcessingResult(scan: ocrResult, failedPageCount: 0)),
+            scanDeviceSupport: StubDeviceSupport(canScanDocuments: true),
+            scanImporter: StubScanImporter(result: .success(ocrResult)),
+            importInbox: StubImportInbox()
+        )
     }
 }

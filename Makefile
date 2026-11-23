@@ -1,33 +1,43 @@
-.PHONY: build test clean lint doc screenshot seed-data help
+.PHONY: build test unit-test ui-test clean doc screenshot seed-data help
 
 PROJECT = OpenScannerRebuild.xcodeproj
 SCHEME = OpenScannerRebuild
-SIMULATOR = platform=iOS Simulator,name=iPhone 16,OS=18.5
+BUNDLE_ID = me.tissanr.OpenScannerRebuild
+# Override with e.g. `make test DESTINATION='platform=iOS Simulator,name=iPhone 17'`.
+DESTINATION ?= $(shell scripts/simulator-destination.sh)
+XCODEBUILD = xcodebuild -project $(PROJECT) -scheme $(SCHEME) -destination '$(DESTINATION)' CODE_SIGNING_ALLOWED=NO
 
 help:
 	@echo "Available commands:"
 	@echo "  make build         - Build the project"
-	@echo "  make test          - Run unit and UI tests"
+	@echo "  make test          - Run unit and UI tests with code coverage"
+	@echo "  make unit-test     - Run unit tests only (fast)"
+	@echo "  make ui-test       - Run UI tests only"
 	@echo "  make clean         - Clean build artifacts"
 	@echo "  make doc           - Generate DocC documentation"
-	@echo "  make screenshot    - Run UI tests and capture screenshots"
-	@echo "  make seed-data     - Launch simulator with seeded data"
+	@echo "  make screenshot    - Run the screenshot UI test"
+	@echo "  make seed-data     - Launch the booted simulator app with seeded data"
 
 build:
-	xcodebuild build -project $(PROJECT) -scheme $(SCHEME) -destination '$(SIMULATOR)' CODE_SIGNING_ALLOWED=NO
+	$(XCODEBUILD) build
 
 test:
-	xcodebuild test -project $(PROJECT) -scheme $(SCHEME) -destination '$(SIMULATOR)' CODE_SIGNING_ALLOWED=NO -enableCodeCoverage YES -parallel-testing-enabled NO
+	$(XCODEBUILD) test -enableCodeCoverage YES -parallel-testing-enabled NO
+
+unit-test:
+	$(XCODEBUILD) test -only-testing:OpenScannerRebuildTests
+
+ui-test:
+	$(XCODEBUILD) test -only-testing:OpenScannerRebuildUITests -parallel-testing-enabled NO
 
 clean:
 	xcodebuild clean -project $(PROJECT) -scheme $(SCHEME)
 
 doc:
-	xcodebuild docbuild -project $(PROJECT) -scheme $(SCHEME) -destination '$(SIMULATOR)'
+	xcodebuild docbuild -project $(PROJECT) -scheme $(SCHEME) -destination '$(DESTINATION)'
 
 screenshot:
-	@echo "Running UI tests to capture screenshots..."
-	xcodebuild test -project $(PROJECT) -scheme $(SCHEME) -destination '$(SIMULATOR)' -only-testing:OpenScannerRebuildUITests CODE_SIGNING_ALLOWED=NO
+	$(XCODEBUILD) test -only-testing:OpenScannerRebuildUITests/ScreenshotTests
 
 seed-data:
-	xcrun simctl launch booted com.scanner.OpenScannerRebuild --ui-testing-seed-scan
+	xcrun simctl launch booted $(BUNDLE_ID) --ui-testing-seed-scan
