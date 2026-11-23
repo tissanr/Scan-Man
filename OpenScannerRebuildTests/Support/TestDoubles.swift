@@ -4,6 +4,7 @@ import UIKit
 
 final class StubScanRepository: ScanRepository {
     private(set) var storedScans: [ScanDocument]
+    private(set) var savedScans: [ScanDocument] = []
 
     init(scans: [ScanDocument]) {
         self.storedScans = scans
@@ -18,9 +19,20 @@ final class StubScanRepository: ScanRepository {
     }
 
     func save(scan: ScanDocument) async throws {
+        savedScans.append(scan)
+        if let index = storedScans.firstIndex(where: { $0.id == scan.id }) {
+            storedScans[index] = scan
+        } else {
+            storedScans.append(scan)
+        }
     }
 
     func updateTitle(scanID: UUID, title: String) async throws {
+        guard let scanIndex = storedScans.firstIndex(where: { $0.id == scanID }) else {
+            return
+        }
+
+        storedScans[scanIndex].title = title
     }
 
     func updateNotes(scanID: UUID, notes: String) async throws {
@@ -41,6 +53,7 @@ final class StubScanRepository: ScanRepository {
     }
 
     func delete(scanID: UUID) async throws {
+        storedScans.removeAll { $0.id == scanID }
     }
 
     func deleteAll() async throws {

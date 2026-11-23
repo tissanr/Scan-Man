@@ -1,4 +1,5 @@
 import CoreGraphics
+import CoreText
 import Foundation
 import PDFKit
 import UIKit
@@ -21,7 +22,7 @@ struct PDFExportService: PDFExporting {
                 image.draw(in: imageRect)
 
                 if mode == .searchable {
-                    drawSearchableText(for: page, in: imageRect)
+                    drawSearchableText(for: page, in: imageRect, context: context.cgContext)
                 }
             }
         }
@@ -50,52 +51,72 @@ struct PDFExportService: PDFExporting {
 
     private func sanitizedFilename(from title: String) -> String {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "OpenScannerExport" : trimmed.replacingOccurrences(of: "/", with: "-")
+        return trimmed.isEmpty ? "Scan Man Export" : trimmed.replacingOccurrences(of: "/", with: "-")
     }
 
-    private func drawSearchableText(for page: ScanPage, in imageRect: CGRect) {
-        let hiddenTextColor = UIColor.black.withAlphaComponent(0.02)
-        let defaultAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 12),
-            .foregroundColor: hiddenTextColor
-        ]
+    /// Draws an invisible, selectable text layer over the page image.
+    ///
+    /// When the stored OCR geometry still matches the page text, each line is placed on its
+    /// bounding box. If the text was edited after OCR, the geometry is stale, so the edited
+    /// text is embedded as a single block instead. Either way the text appears exactly once.
+    private func drawSearchableText(for page: ScanPage, in imageRect: CGRect, context: CGContext) {
+        let observations = page.orderedTextObservations.filter { !$0.text.isEmpty }
+        let observationText = observations.map(\.text).joined(separator: "\n").normalizedOCRText
 
-        if !page.textObservations.isEmpty {
-            for observation in page.textObservations where !observation.text.isEmpty {
+        context.saveGState()
+        context.setTextDrawingMode(.invisible)
+        defer { context.restoreGState() }
+
+        if !observations.isEmpty, observationText == page.recognizedText {
+            for observation in observations {
                 let rect = observationRect(for: observation.boundingBox, in: imageRect)
                 guard rect.width > 1, rect.height > 1 else {
                     continue
                 }
-
-                let fontSize = max(8, min(rect.height * 0.85, 36))
-                let attributes: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: fontSize),
-                    .foregroundColor: hiddenTextColor
-                ]
-                NSString(string: observation.text).draw(in: rect, withAttributes: attributes)
+                drawInvisibleLine(observation.text, fittedTo: rect, context: context)
             }
-
-            let combinedObservationText = page.orderedTextObservations
-                .map(\.text)
-                .joined(separator: "\n")
-                .normalizedOCRText
-
-            if !combinedObservationText.isEmpty {
-                NSString(string: combinedObservationText).draw(
-                    in: imageRect.insetBy(dx: 12, dy: 12),
-                    withAttributes: defaultAttributes
-                )
-            }
+            return
         }
 
         guard !page.recognizedText.isEmpty else {
             return
         }
 
-        NSString(string: page.recognizedText).draw(
-            in: imageRect.insetBy(dx: 12, dy: 12),
-            withAttributes: defaultAttributes
-        )
+        let lines = page.recognizedText.components(separatedBy: .newlines)
+        let lineHeight = min(12, imageRect.height / CGFloat(max(lines.count, 1)))
+        for (index, line) in lines.enumerated() {
+            let rect = CGRect(
+                x: imageRect.minX,
+                y: imageRect.minY + CGFloat(index) * lineHeight,
+                width: imageRect.width,
+                height: lineHeight
+            )
+            drawInvisibleLine(line, fittedTo: rect, context: context, stretchToWidth: false)
+        }
+    }
+
+    /// Draws one line of text so its glyph run covers `rect`, which lets PDF viewers highlight
+    /// the matching region of the scanned image when the text is searched or selected.
+    private func drawInvisibleLine(_ text: String, fittedTo rect: CGRect, context: CGContext, stretchToWidth: Bool = true) {
+        let fontSize = max(1, rect.height * 0.85)
+        let font = CTFontCreateWithName("Helvetica" as CFString, fontSize, nil)
+        let attributed = NSAttributedString(string: text, attributes: [.font: font])
+        let line = CTLineCreateWithAttributedString(attributed)
+        let lineWidth = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
+        guard lineWidth > 0 else {
+            return
+        }
+
+        let horizontalScale = stretchToWidth ? rect.width / lineWidth : min(1, rect.width / lineWidth)
+
+        // UIGraphicsPDFRenderer uses a flipped (top-left origin) coordinate space, so the text
+        // matrix is flipped back before drawing to keep glyphs upright for extraction.
+        context.saveGState()
+        context.translateBy(x: rect.minX, y: rect.maxY - CTFontGetDescent(font))
+        context.scaleBy(x: horizontalScale, y: -1)
+        context.textPosition = .zero
+        CTLineDraw(line, context)
+        context.restoreGState()
     }
 
     private func fittedRect(for imageSize: CGSize, in bounds: CGRect) -> CGRect {

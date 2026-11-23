@@ -92,20 +92,17 @@ final class ShareViewController: UIViewController {
 
     private func save(provider: NSItemProvider, into directory: URL) async throws -> Bool {
         if provider.hasItemConformingToTypeIdentifier(UTType.pdf.identifier) {
-            let fileURL = try await loadFileRepresentation(from: provider, typeIdentifier: UTType.pdf.identifier)
-            try copySharedFile(at: fileURL, to: uniqueDestinationURL(in: directory, preferredName: provider.suggestedName, pathExtension: fileURL.pathExtension.isEmpty ? "pdf" : fileURL.pathExtension))
+            try await copyFileRepresentation(from: provider, typeIdentifier: UTType.pdf.identifier, into: directory, fallbackExtension: "pdf")
             return true
         }
 
         if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
-            if let fileURL = await loadOptionalFileRepresentation(from: provider, typeIdentifier: UTType.image.identifier) {
-                let pathExtension = fileURL.pathExtension.isEmpty ? "jpg" : fileURL.pathExtension
-                try copySharedFile(at: fileURL, to: uniqueDestinationURL(in: directory, preferredName: provider.suggestedName, pathExtension: pathExtension))
+            if (try? await copyFileRepresentation(from: provider, typeIdentifier: UTType.image.identifier, into: directory, fallbackExtension: "jpg")) != nil {
                 return true
             }
 
             let data = try await loadDataRepresentation(from: provider, typeIdentifier: UTType.image.identifier)
-            let destinationURL = uniqueDestinationURL(in: directory, preferredName: provider.suggestedName, pathExtension: "jpg")
+            let destinationURL = Self.uniqueDestinationURL(in: directory, preferredName: provider.suggestedName, pathExtension: "jpg")
             try data.write(to: destinationURL, options: .atomic)
             return true
         }
@@ -113,37 +110,37 @@ final class ShareViewController: UIViewController {
         return false
     }
 
-    private func copySharedFile(at sourceURL: URL, to destinationURL: URL) throws {
-        if fileManager.fileExists(atPath: destinationURL.path) {
-            try fileManager.removeItem(at: destinationURL)
-        }
-
-        try fileManager.copyItem(at: sourceURL, to: destinationURL)
-    }
-
-    private func uniqueDestinationURL(in directory: URL, preferredName: String?, pathExtension: String) -> URL {
+    nonisolated private static func uniqueDestinationURL(in directory: URL, preferredName: String?, pathExtension: String) -> URL {
         let baseName = (preferredName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? preferredName! : "Shared Import")
             .replacingOccurrences(of: "/", with: "-")
         let filename = "\(baseName)-\(UUID().uuidString.prefix(8))"
         return directory.appendingPathComponent(filename).appendingPathExtension(pathExtension)
     }
 
-    private func loadFileRepresentation(from provider: NSItemProvider, typeIdentifier: String) async throws -> URL {
-        try await withCheckedThrowingContinuation { continuation in
+    /// Copies the provider's file into the inbox. The URL handed to the completion handler is
+    /// deleted as soon as the handler returns, so the copy has to happen inside it.
+    private func copyFileRepresentation(
+        from provider: NSItemProvider,
+        typeIdentifier: String,
+        into directory: URL,
+        fallbackExtension: String
+    ) async throws {
+        let preferredName = provider.suggestedName
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             provider.loadFileRepresentation(forTypeIdentifier: typeIdentifier) { url, error in
-                if let url {
-                    continuation.resume(returning: url)
-                } else {
+                guard let url else {
                     continuation.resume(throwing: error ?? CocoaError(.fileReadUnknown))
+                    return
                 }
-            }
-        }
-    }
 
-    private func loadOptionalFileRepresentation(from provider: NSItemProvider, typeIdentifier: String) async -> URL? {
-        await withCheckedContinuation { continuation in
-            provider.loadFileRepresentation(forTypeIdentifier: typeIdentifier) { url, error in
-                continuation.resume(returning: url)
+                do {
+                    let pathExtension = url.pathExtension.isEmpty ? fallbackExtension : url.pathExtension
+                    let destinationURL = Self.uniqueDestinationURL(in: directory, preferredName: preferredName, pathExtension: pathExtension)
+                    try FileManager.default.copyItem(at: url, to: destinationURL)
+                    continuation.resume()
+                } catch {
+                    continuation.resume(throwing: error)
+                }
             }
         }
     }

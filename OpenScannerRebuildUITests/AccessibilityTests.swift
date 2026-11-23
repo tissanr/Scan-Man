@@ -1,8 +1,11 @@
 import XCTest
 
 final class AccessibilityTests: XCTestCase {
-    override func setUpWithError() throws {
+    @MainActor
+    override func setUp() async throws {
         continueAfterFailure = false
+        // The launch tests run once per UI configuration and can leave the simulator rotated.
+        XCUIDevice.shared.orientation = .portrait
     }
 
     @MainActor

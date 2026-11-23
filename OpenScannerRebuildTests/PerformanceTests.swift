@@ -20,6 +20,7 @@ final class PerformanceTests: XCTestCase {
         }
     }
     
+    @MainActor
     func testPDFExportPerformance() {
         let exporter = PDFExportService()
         let scan = TestData.scan(title: "Perf Test", pages: [
@@ -28,12 +29,7 @@ final class PerformanceTests: XCTestCase {
         ])
         
         measure {
-            let expectation = expectation(description: "Export")
-            Task {
-                _ = try? exporter.export(scan: scan, mode: .searchable)
-                expectation.fulfill()
-            }
-            wait(for: [expectation], timeout: 10.0)
+            _ = try? exporter.export(scan: scan, mode: .searchable)
         }
     }
 }

@@ -1,8 +1,11 @@
 import XCTest
 
 final class OpenScannerRebuildUITests: XCTestCase {
-    override func setUpWithError() throws {
+    @MainActor
+    override func setUp() async throws {
         continueAfterFailure = false
+        // The launch tests run once per UI configuration and can leave the simulator rotated.
+        XCUIDevice.shared.orientation = .portrait
     }
 
     @MainActor
@@ -28,7 +31,7 @@ final class OpenScannerRebuildUITests: XCTestCase {
         XCTAssertTrue(scanBtn.waitForExistence(timeout: 5))
         scanBtn.tap()
 
-        XCTAssertTrue(app.alerts["Open Scanner"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.alerts["Scan Man"].waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -57,9 +60,11 @@ final class OpenScannerRebuildUITests: XCTestCase {
         let searchField = app.searchFields.firstMatch
         XCTAssertTrue(searchField.waitForExistence(timeout: 5))
         searchField.tap()
-        
-        // Just verify it became active for now
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 2))
+        searchField.typeText("invoice")
+        XCTAssertTrue(app.staticTexts["Seeded Invoice"].waitForExistence(timeout: 2))
+
+        searchField.typeText(" nothing matches")
+        XCTAssertTrue(app.staticTexts["No Results"].waitForExistence(timeout: 2))
     }
 
     @MainActor
@@ -95,12 +100,13 @@ final class OpenScannerRebuildUITests: XCTestCase {
 
         let editor = app.textViews["Extracted text editor"]
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
-        editor.tap()
-        _ = app.keyboards.firstMatch.waitForExistence(timeout: 3)
-        if app.menuItems["Select All"].waitForExistence(timeout: 1) {
-            app.menuItems["Select All"].tap()
+        // The editor sits below the preview and layout sections.
+        for _ in 0..<4 where !editor.isHittable {
+            app.swipeUp()
         }
-        app.typeText("Edited OCR text")
+        editor.tap()
+        editor.typeKey("a", modifierFlags: .command)
+        editor.typeText("Edited OCR text")
         app.buttons["Save extracted text"].tap()
 
         app.navigationBars.buttons.element(boundBy: 0).tap()

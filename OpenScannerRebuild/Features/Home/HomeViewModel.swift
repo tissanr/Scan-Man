@@ -17,6 +17,7 @@ final class HomeViewModel: ObservableObject {
     @Published private(set) var isShowingScanner = false
     @Published private(set) var isImporting = false
     @Published private(set) var pendingNavigationScan: ScanDocument?
+    private var isProcessingInbox = false
 
     init(repository: ScanRepository, titleSuggester: TitleSuggesting, ocrProcessor: ScanOCRProcessing, scanDeviceSupport: ScanDeviceSupporting, scanImporter: ScanImporting, importInbox: ImportInboxManaging) {
         self.repository = repository
@@ -73,6 +74,16 @@ final class HomeViewModel: ObservableObject {
         }
     }
 
+    /// Mirrors an edit made elsewhere (e.g. the detail screen) into the library list.
+    func applyUpdatedScan(_ scan: ScanDocument) {
+        guard let index = scans.firstIndex(where: { $0.id == scan.id }) else {
+            return
+        }
+
+        scans[index] = scan
+        scans.sort { $0.updatedAt > $1.updatedAt }
+    }
+
     func delete(_ scan: ScanDocument) async {
         do {
             try await repository.delete(scanID: scan.id)
@@ -116,7 +127,7 @@ final class HomeViewModel: ObservableObject {
     func importPhotos(from itemData: [Data]) async {
         let images = itemData.compactMap(UIImage.init(data:))
         guard !images.isEmpty else {
-            activeErrorMessage = "Open Scanner could not import those photos."
+            activeErrorMessage = "Scan Man could not import those photos."
             return
         }
 
@@ -137,15 +148,26 @@ final class HomeViewModel: ObservableObject {
         titleSuggester.suggestTitle(for: pages)
     }
 
-    private func processOCR(for scan: ScanDocument) async {
+    func processOCR(for scan: ScanDocument) async {
         let result = await ocrProcessor.process(scan: scan)
 
         do {
-            try await repository.save(scan: result.scan)
-            if let index = scans.firstIndex(where: { $0.id == result.scan.id }) {
-                scans[index] = result.scan
-            } else {
-                await load()
+            // OCR can take a while: the user may have renamed, annotated or deleted the scan
+            // in the meantime, so merge into the current stored state instead of overwriting it.
+            guard let current = try await repository.fetchScan(id: scan.id) else {
+                return
+            }
+
+            var merged = current
+            merged.pages = result.scan.pages
+            merged.updatedAt = result.scan.updatedAt
+            if current.title == scan.title {
+                merged.title = result.scan.title
+            }
+
+            try await repository.save(scan: merged)
+            if let index = scans.firstIndex(where: { $0.id == merged.id }) {
+                scans[index] = merged
             }
 
             if result.failedPageCount == result.scan.pages.count, !result.scan.pages.isEmpty {
@@ -177,11 +199,19 @@ final class HomeViewModel: ObservableObject {
                 await processOCR(for: scan)
             }
         } catch {
-            activeErrorMessage = error.localizedDescription.isEmpty ? "Open Scanner could not import that document." : error.localizedDescription
+            activeErrorMessage = error.localizedDescription.isEmpty ? "Scan Man could not import that document." : error.localizedDescription
         }
     }
 
     private func importPendingInboxItems() async {
+        // `load()` and the scene becoming active both trigger this at launch; running twice
+        // concurrently would import the same inbox files twice.
+        guard !isProcessingInbox else {
+            return
+        }
+        isProcessingInbox = true
+        defer { isProcessingInbox = false }
+
         let items: [PendingImportItem]
         do {
             items = try importInbox.pendingImports()
@@ -218,7 +248,7 @@ final class HomeViewModel: ObservableObject {
                     await processOCR(for: scan)
                 }
             } catch {
-                activeErrorMessage = "Open Scanner could not import one of the files from the Scan Man import folder."
+                activeErrorMessage = "Scan Man could not import one of the files from the import folder."
             }
         }
     }

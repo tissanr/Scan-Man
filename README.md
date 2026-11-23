@@ -13,7 +13,8 @@ Scan Man is a local-first iOS document scanner built with Apple frameworks only.
 
 ## Local Build Notes
 
-- Open `OpenScannerRebuild.xcodeproj` in Xcode 16 or newer.
+- Open `OpenScannerRebuild.xcodeproj` in Xcode 26 or newer (the target uses default MainActor isolation and `@concurrent`).
+- `make build`, `make unit-test` and `make test` pick the newest available iPhone simulator automatically.
 - Select a Personal Team signing identity for the app target.
 - The app is designed to run fully offline with local storage only.
 - Camera scanning is unavailable in the simulator; the app should show a friendly message instead of crashing.
@@ -21,7 +22,7 @@ Scan Man is a local-first iOS document scanner built with Apple frameworks only.
 
 ## Current Status
 
-- Delivered phases: 1, 2, 3, 4
+- Delivered phases: 1–5 and 8; phases 7 and 9 partially. Phase 6 (rollout) is next — see `ROADMAP.md`.
 - Clean architecture baseline is in place.
 - Home and detail flows use local Core Data-backed models.
 - VisionKit capture, OCR-backed search, per-page OCR text editing, text export, and searchable PDF export with OCR geometry alignment are implemented.

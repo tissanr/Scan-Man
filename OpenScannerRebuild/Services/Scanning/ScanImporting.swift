@@ -17,11 +17,11 @@ enum ScanImportError: LocalizedError {
         case .noPages:
             return "The scan did not contain any pages."
         case .imageEncodingFailed(let pageIndex):
-            return "Open Scanner could not save page \(pageIndex + 1)."
+            return "Scan Man could not save page \(pageIndex + 1)."
         case .invalidPDF:
-            return "Open Scanner could not read that PDF."
+            return "Scan Man could not read that PDF."
         case .pdfPageRenderingFailed(let pageIndex):
-            return "Open Scanner could not import PDF page \(pageIndex + 1)."
+            return "Scan Man could not import PDF page \(pageIndex + 1)."
         }
     }
 }

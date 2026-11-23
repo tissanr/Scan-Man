@@ -16,6 +16,7 @@ struct PagePreviewView: View {
                                 .scaledToFit()
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .background(Color.black)
+                                .accessibilityLabel("Scanned page \(page.order + 1)")
 
                             OCRLayoutOverlay(
                                 page: page,
@@ -23,7 +24,7 @@ struct PagePreviewView: View {
                                 containerSize: geometry.size,
                                 selectedObservationID: selectedObservationID
                             )
-                            .accessibilityIdentifier("Detected Layout")
+                            .accessibilityHidden(true)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Color.black)
@@ -34,7 +35,7 @@ struct PagePreviewView: View {
             } else {
                 ContentUnavailableStateView(
                     title: "Preview Unavailable",
-                    message: "Open Scanner could not load this page image.",
+                    message: "Scan Man could not load this page image.",
                     systemImage: "photo"
                 )
             }
@@ -65,9 +66,11 @@ private struct OCRLayoutOverlay: View {
                     )
                     .frame(width: rect.width, height: rect.height)
                     .offset(x: rect.minX, y: rect.minY)
-                    .accessibilityHidden(true)
             }
         }
+        // Without a fixed frame the ZStack shrinks to its largest child and gets centered,
+        // which shifts every offset box away from the text it belongs to.
+        .frame(width: containerSize.width, height: containerSize.height, alignment: .topLeading)
     }
 
     private func fittedRect(for imageSize: CGSize, in bounds: CGRect) -> CGRect {
